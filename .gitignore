@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs and caches
+dist/
+build/
+out/
+cache/
+**/dist/
+**/build/
+**/out/
+**/.cache/
+
+# IDE and editor
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Hardhat / Foundry / EVM tooling
+artifacts/
+cache/
+hh-cache/
+broadcast/
+typechain/
+# Project-specific
+oraclex/artifacts/
+oraclex/hh-cache/
+
+# Framework-specific
+.vite/
+.next/
+.turbo/
+.vercel/
+
+# OS files
+.DS_Store
+Thumbs.db
+
