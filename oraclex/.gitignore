@@ -26,9 +26,8 @@ Thumbs.db
 
 # Hardhat
 cache/
-# Keep artifacts for deployment (contract ABIs needed)
-# artifacts/
 hh-cache/
+# Note: artifacts/ folder MUST be committed (needed for backend deployment)
 
 # Testing
 coverage/
