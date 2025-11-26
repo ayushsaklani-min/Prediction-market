@@ -112,7 +112,7 @@ export default function HomePage() {
         <TabsContent value="trending" className="space-y-4">
           {trendingMarkets && trendingMarkets.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {trendingMarkets.map((market) => (
+              {(trendingMarkets as Market[]).map((market: Market) => (
                 <MarketCard key={market.marketId} market={market} />
               ))}
             </div>
@@ -125,16 +125,16 @@ export default function HomePage() {
 
         <TabsContent value="closing" className="space-y-4">
           {filteredMarkets
-            ?.filter((m) => m.closeTimestamp < Date.now() / 1000 + 86400)
-            .map((market) => (
+            .filter((m: Market) => m.closeTimestamp < Date.now() / 1000 + 86400)
+            .map((market: Market) => (
               <MarketCard key={market.marketId} market={market} />
             ))}
         </TabsContent>
 
         <TabsContent value="settled" className="space-y-4">
           {filteredMarkets
-            ?.filter((m) => m.status === 'settled')
-            .map((market) => (
+            .filter((m: Market) => m.status === 'settled')
+            .map((market: Market) => (
               <MarketCard key={market.marketId} market={market} />
             ))}
         </TabsContent>
