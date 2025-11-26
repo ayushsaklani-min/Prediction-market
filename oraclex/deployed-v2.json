@@ -1,0 +1,16 @@
+{
+  "network": 80002,
+  "deployer": "0x48E8750b87278227b5BBd53cae998e6083910bd9",
+  "timestamp": "2025-11-22T06:38:53.401Z",
+  "contracts": {
+    "ORXToken": "0xf5f5424A78657E374F1018307c07323696e3A6b3",
+    "veORX": "0x351dA233FaF06B43440E35EE6d48721bfBD3Ca92",
+    "MarketPositions": "0x81282b3d5acA181c27028e57917D18145abf1be4",
+    "Treasury": "0xE0880C17bE8c6c5dd5611440299A4e5d223a488f",
+    "FeeDistributor": "0x53756cfd49Cc9354C10cafddD0d6a63Fe77a6bdf",
+    "PredictionAMM": "0x6A3b46fb08eb31e2811d447EEd0550b5d66c3487",
+    "VerifierV2": "0x40365fbda82Fa5284B5Ae8d9458d77737c423112",
+    "OracleAdapterV2": "0xEF765a5524558A6aDB5ACECD936373c0182eE6Fc",
+    "MarketFactoryV2": "0x82032757239F37E6c42D5098c115EcD67Ce587A7"
+  }
+}
