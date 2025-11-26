@@ -9,9 +9,9 @@ import { Market, MarketStatus } from '@/types';
 export function useMarkets() {
   const publicClient = usePublicClient();
 
-  return useQuery({
+  return useQuery<Market[]>({
     queryKey: ['markets'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Market[]> => {
       if (!publicClient) return [];
 
       // For now, return empty array since no markets are created yet
@@ -108,9 +108,9 @@ export function useMarketPrice(marketId: string, side: 0 | 1) {
 export function useTrendingMarkets() {
   const { data: markets } = useMarkets();
 
-  return useQuery({
+  return useQuery<Market[]>({
     queryKey: ['trending-markets', markets],
-    queryFn: async () => {
+    queryFn: async (): Promise<Market[]> => {
       if (!markets) return [];
 
       // Sort by volume
