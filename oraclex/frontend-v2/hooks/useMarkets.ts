@@ -68,7 +68,7 @@ export function useMarkets() {
               tags: [],
               closeTimestamp: Number(factoryData[3]),
               resolutionTimestamp: Number(factoryData[4]),
-              creator: factoryData[5] as string,
+              creator: factoryData[5] as `0x${string}`,
               createdAt: 0,
               active: factoryData[6] as boolean,
               yesPool: ammData[1] as bigint,
