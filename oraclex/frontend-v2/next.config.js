@@ -2,7 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['api.oraclex.io', 'ipfs.io', 'gateway.pinata.cloud'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'api.oraclex.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ipfs.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gateway.pinata.cloud',
+      },
+    ],
     formats: ['image/avif', 'image/webp'],
   },
   webpack: (config) => {
@@ -17,6 +30,13 @@ const nextConfig = {
       { module: /node_modules\/@metamask\/sdk/ },
     ];
     return config;
+  },
+  turbopack: {
+    resolveAlias: {
+      'pino-pretty': false,
+      'lokijs': false,
+      'encoding': false,
+    },
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
