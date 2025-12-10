@@ -103,25 +103,77 @@ Visit `http://localhost:3000` to see the application.
 
 ## 📦 Deployment
 
-### Deploy All Contracts
+### Smart Contracts
 
-```bash
-npx hardhat run scripts-v2/deploy-v2.js --network amoy --config hardhat-v2.config.js
-```
-
-### Deploy Fresh System
+Deploy all contracts to Polygon Amoy testnet:
 
 ```bash
 npx hardhat run scripts-v2/deploy-all-fresh.js --network amoy --config hardhat-v2.config.js
 ```
 
-### Create Demo Markets
+Create demo markets:
 
 ```bash
 npx hardhat run scripts-v2/create-demo-markets.js --network amoy --config hardhat-v2.config.js
 ```
 
-## 🎮 Usage
+### Frontend (Vercel)
+
+1. **Connect Repository**: Import your GitHub repo to Vercel
+2. **Configure Build Settings**:
+   - Framework Preset: `Next.js`
+   - Root Directory: `oraclex/frontend-v2`
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+3. **Environment Variables**: Add these in Vercel dashboard:
+   ```
+   NEXT_PUBLIC_CHAIN_ID=80002
+   NEXT_PUBLIC_RPC_URL=https://rpc-amoy.polygon.technology
+   NEXT_PUBLIC_EXPLORER_URL=https://amoy.polygonscan.com
+   NEXT_PUBLIC_ORX_TOKEN=0xf5f5424A78657E374F1018307c07323696e3A6b3
+   NEXT_PUBLIC_VEORX=0xEcde5DC1B5e9634c5f58F3F0E016De734EccBfFE
+   NEXT_PUBLIC_MARKET_POSITIONS=0x9F12Bd26E6BA262dcC2c001400F8a7E82BfE589A
+   NEXT_PUBLIC_PREDICTION_AMM=0x940221fCE2573E99024efEd0369E8ee58e2535a1
+   NEXT_PUBLIC_MARKET_FACTORY=0xd7CB165Ef5B95De40cEdC323Bfe69ce546fB7731
+   NEXT_PUBLIC_ORACLE_ADAPTER=0x954f60a82553CAF9Ec8e6e4F44F6Fc7e2479a792
+   NEXT_PUBLIC_VERIFIER=0xf72d7F9Ee81264fb43da8b0D1fbB17F73DD66Fe4
+   NEXT_PUBLIC_GOVERNANCE=0x4C5017777e234E716c7e44FbFF75ee394646DD16
+   NEXT_PUBLIC_TREASURY=0xE0880C17bE8c6c5dd5611440299A4e5d223a488f
+   NEXT_PUBLIC_FEE_DISTRIBUTOR=0x53756cfd49Cc9354C10cafddD0d6a63Fe77a6bdf
+   NEXT_PUBLIC_USDC=0x170490a94B901237bc5425f965ecEF111DEECcE1
+   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+   NEXT_PUBLIC_ENABLE_GOVERNANCE=true
+   ```
+4. **Deploy**: Click "Deploy" - Vercel will auto-deploy on every push to main
+
+### Backend (Render)
+
+1. **Connect Repository**: Create new Web Service on Render
+2. **Configure Service**:
+   - Name: `oraclex-backend`
+   - Root Directory: `oraclex`
+   - Build Command: `npm ci`
+   - Start Command: `npm run start:backend`
+   - Node Version: `18`
+3. **Environment Variables**: Add these in Render dashboard:
+   ```
+   NODE_ENV=production
+   PRIVATE_KEY=your_private_key
+   RPC_URL=https://rpc-amoy.polygon.technology
+   USDC_ADDRESS=0x170490a94B901237bc5425f965ecEF111DEECcE1
+   BACKEND_PORT=4000
+   WS_PORT=4001
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   SUPABASE_ANON_KEY=your_anon_key
+   ```
+4. **Deploy**: Render will auto-deploy from your `render.yaml` configuration
+
+> **Note**: After backend deploys, update frontend env vars with backend URL:
+> - `NEXT_PUBLIC_API_URL=https://your-backend.onrender.com`
+> - `NEXT_PUBLIC_WS_URL=wss://your-backend.onrender.com`
+
+##  Usage
 
 ### Creating a Market
 
@@ -159,7 +211,7 @@ npx hardhat run scripts-v2/create-proposal-now.js --network amoy --config hardha
 npx hardhat run scripts-v2/list-proposals.js --network amoy --config hardhat-v2.config.js
 ```
 
-## 📝 Smart Contracts
+##  Smart Contracts
 
 ### Core Contracts
 
@@ -187,7 +239,7 @@ npx hardhat run scripts-v2/list-proposals.js --network amoy --config hardhat-v2.
 - **Backend**: Node.js, Express, Supabase
 - **Oracle**: Chainlink Functions (planned)
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 # Run all tests
@@ -200,7 +252,7 @@ npx hardhat test test-v2/ORXToken.test.js --config hardhat-v2.config.js
 npx hardhat coverage --config hardhat-v2.config.js
 ```
 
-## 📊 Project Structure
+##  Project Structure
 
 ```
 oraclex/
@@ -216,7 +268,7 @@ oraclex/
 └── supabase/             # Database schema
 ```
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions are welcome! Please follow these steps:
 
@@ -230,20 +282,48 @@ Contributions are welcome! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔗 Links
 
-- **Website**: [oraclex.io](https://oraclex.io)
-- **Documentation**: [docs.oraclex.io](https://docs.oraclex.io)
-- **Twitter**: [@OracleX](https://twitter.com/oraclex)
-- **Discord**: [Join our community](https://discord.gg/oraclex)
-
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - OpenZeppelin for secure contract libraries
 - Polygon for zkEVM infrastructure
 - The Graph for indexing protocol
 - Chainlink for oracle services
 
+## 🚀 Quick Deployment Guide
+
+### 1. Fork & Clone
+```bash
+git clone https://github.com/ayushsaklani-min/ZKEVM.git
+cd ZKEVM/oraclex
+```
+
+### 2. Install Dependencies
+```bash
+npm install
+cd frontend-v2 && npm install && cd ..
+```
+
+### 3. Deploy to Vercel (Frontend)
+- Go to [vercel.com](https://vercel.com)
+- Import your GitHub repository
+- Set root directory to `oraclex/frontend-v2`
+- Add environment variables from `.env.example`
+- Deploy!
+
+### 4. Deploy to Render (Backend)
+- Go to [render.com](https://render.com)
+- Create new Web Service
+- Connect your GitHub repository
+- Render will auto-detect `render.yaml`
+- Add environment variables
+- Deploy!
+
+### 5. Update Frontend with Backend URL
+After backend deploys, update these in Vercel:
+- `NEXT_PUBLIC_API_URL=https://your-backend.onrender.com`
+- `NEXT_PUBLIC_WS_URL=wss://your-backend.onrender.com`
+
 ---
 
-Built with ❤️ by the OracleX Team
+Built for Polygon by ayushsaklani
