@@ -99,32 +99,10 @@ export default function AdminPage() {
                 <p className="text-sm text-muted-foreground">
                   View Chainlink Functions logs, AI predictions, and settlement data
                 </p>
-                <div className="mt-6 space-y-2">
-                  <div className="rounded-lg border p-4">
-                    <div className="mb-2 text-sm font-semibold">Last AI Prediction</div>
-                    <div className="text-xs text-muted-foreground">
-                      Market: 0x1234...5678
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Probability: 65% (Confidence: 85%)
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Model: GPT-4-turbo-preview
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border p-4">
-                    <div className="mb-2 text-sm font-semibold">Last Settlement</div>
-                    <div className="text-xs text-muted-foreground">
-                      Market: 0x9876...4321
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Outcome: YES (Confidence: 92%)
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Status: Finalized
-                    </div>
-                  </div>
+                <div className="mt-6">
+                  <p className="text-sm text-muted-foreground">
+                    Oracle data will be available once markets are settled
+                  </p>
                 </div>
               </div>
             </CardContent>

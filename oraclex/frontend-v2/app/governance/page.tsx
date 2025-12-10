@@ -1,21 +1,82 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { StakingPanel } from '@/components/governance/StakingPanel';
 import { ProposalCard } from '@/components/governance/ProposalCard';
 import { useGovernance } from '@/hooks/useGovernance';
 import { useStaking } from '@/hooks/useStaking';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { formatORX } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Vote, Lock, TrendingUp, Users, Plus } from 'lucide-react';
+import { CONTRACTS } from '@/config/contracts';
+import { GOVERNANCE_ABI } from '@/lib/abis';
+import { toast } from 'sonner';
 
 export default function GovernancePage() {
   const { address, isConnected } = useAccount();
   const { proposals, activeProposals, pastProposals, isLoading } = useGovernance();
   const { lockedBalance, veOrxBalance } = useStaking();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [proposalTitle, setProposalTitle] = useState('');
+  const [proposalDescription, setProposalDescription] = useState('');
+  const [targetAddress, setTargetAddress] = useState('');
+  const [calldata, setCalldata] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Check if Governance contract is deployed
+  const isGovernanceDeployed = CONTRACTS.Governance && CONTRACTS.Governance !== '0x...' && CONTRACTS.Governance.length === 42;
+
+  const handleCreateProposal = async () => {
+    if (!address || !proposalTitle || !proposalDescription) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      toast.loading('Creating proposal...', { id: 'create-proposal' });
+
+      // OpenZeppelin Governor requires at least one action
+      // Use dummy action for signal votes, or real action if provided
+      const targets: `0x${string}`[] = targetAddress ? [targetAddress as `0x${string}`] : ['0x0000000000000000000000000000000000000000'];
+      const values: bigint[] = targetAddress ? [0n] : [0n];
+      const calldatas: `0x${string}`[] = calldata ? [calldata as `0x${string}`] : ['0x'];
+      const description = `# ${proposalTitle}\n\n${proposalDescription}`;
+
+      // Note: User needs 100 ORX locked as veORX to create proposals
+      const tx = await writeContractAsync({
+        address: CONTRACTS.Governance,
+        abi: GOVERNANCE_ABI,
+        functionName: 'propose',
+        args: [targets, values, calldatas, description],
+      });
+
+      await publicClient?.waitForTransactionReceipt({ hash: tx });
+      
+      toast.success('Proposal created successfully!', { id: 'create-proposal' });
+      setIsCreateDialogOpen(false);
+      setProposalTitle('');
+      setProposalDescription('');
+      setTargetAddress('');
+      setCalldata('');
+    } catch (error: any) {
+      console.error('Create proposal error:', error);
+      toast.error(error.message || 'Failed to create proposal', { id: 'create-proposal' });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   if (!isConnected) {
     return (
@@ -42,10 +103,79 @@ export default function GovernancePage() {
             Stake ORX and vote on protocol proposals
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Proposal
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button disabled={!isGovernanceDeployed} title={!isGovernanceDeployed ? 'Governance contract not deployed yet' : ''}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Proposal
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create Governance Proposal</DialogTitle>
+              <DialogDescription>
+                Submit a proposal for the DAO to vote on. You need sufficient veORX to create proposals.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  placeholder="e.g., Reduce Trading Fee to 0.2%"
+                  value={proposalTitle}
+                  onChange={(e) => setProposalTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Explain your proposal in detail..."
+                  value={proposalDescription}
+                  onChange={(e) => setProposalDescription(e.target.value)}
+                  rows={6}
+                />
+              </div>
+              <div>
+                <Label htmlFor="target">Target Contract (optional)</Label>
+                <Input
+                  id="target"
+                  placeholder="0x..."
+                  value={targetAddress}
+                  onChange={(e) => setTargetAddress(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Leave empty for signal votes
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="calldata">Calldata (optional)</Label>
+                <Input
+                  id="calldata"
+                  placeholder="0x..."
+                  value={calldata}
+                  onChange={(e) => setCalldata(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Function call data if executing on-chain action
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                  disabled={isCreating}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateProposal} disabled={isCreating}>
+                  {isCreating ? 'Creating...' : 'Create Proposal'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
@@ -138,7 +268,9 @@ export default function GovernancePage() {
                     <div className="text-center">
                       <h3 className="font-semibold">No Active Proposals</h3>
                       <p className="text-sm text-muted-foreground">
-                        Check back later or create a new proposal
+                        {isGovernanceDeployed 
+                          ? 'Check back later or create a new proposal'
+                          : 'Governance contract not deployed yet'}
                       </p>
                     </div>
                   </CardContent>

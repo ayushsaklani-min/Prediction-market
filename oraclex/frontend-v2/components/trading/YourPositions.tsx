@@ -63,7 +63,7 @@ export function YourPositions({ marketId }: YourPositionsProps) {
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="yes">YES</Badge>
+                    <Badge variant="default">YES</Badge>
                     <span className="font-semibold">
                       {formatShares(yesShares)} shares
                     </span>
@@ -86,7 +86,7 @@ export function YourPositions({ marketId }: YourPositionsProps) {
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="no">NO</Badge>
+                    <Badge variant="secondary">NO</Badge>
                     <span className="font-semibold">
                       {formatShares(noShares)} shares
                     </span>

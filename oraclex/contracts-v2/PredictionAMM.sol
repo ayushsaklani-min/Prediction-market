@@ -122,9 +122,9 @@ contract PredictionAMM is
             winningSide: 0
         });
 
-        // Transfer initial liquidity from operator
-        require(usdc.transferFrom(msg.sender, address(this), initialYes + initialNo), "AMM: transfer failed");
-
+        // NOTE: Liquidity is already transferred by the Factory before calling this function
+        // No need to transfer again - the Factory transfers directly to the AMM
+        
         // Mint initial LP shares
         uint256 initialShares = sqrt(k);
         lpShares[marketId][msg.sender] = initialShares;
@@ -191,7 +191,7 @@ contract PredictionAMM is
         }
 
         // Mint position tokens
-        uint256 tokenId = uint256(marketId) * 2 + side;
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(marketId, side)));
         positions.mint(msg.sender, tokenId, sharesOut);
 
         emit Trade(marketId, msg.sender, side, true, amountIn, sharesOut, fee);
@@ -244,7 +244,7 @@ contract PredictionAMM is
         market.totalFees += fee;
 
         // Burn position tokens
-        uint256 tokenId = uint256(marketId) * 2 + side;
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(marketId, side)));
         positions.burn(msg.sender, tokenId, sharesIn);
 
         // Transfer USDC to user
@@ -369,7 +369,7 @@ contract PredictionAMM is
         payout = shares;
 
         // Burn position tokens
-        uint256 tokenId = uint256(marketId) * 2 + side;
+        uint256 tokenId = uint256(keccak256(abi.encodePacked(marketId, side)));
         positions.burn(msg.sender, tokenId, shares);
 
         // Transfer USDC
@@ -405,6 +405,13 @@ contract PredictionAMM is
 
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
+    }
+
+    /// @notice Set positions contract address (admin only)
+    /// @param _positions New positions contract address
+    function setPositions(address _positions) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_positions != address(0), "AMM: zero address");
+        positions = IMarketPositions(_positions);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}

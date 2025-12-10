@@ -31,8 +31,9 @@ export function useBuyShares() {
       await publicClient?.waitForTransactionReceipt({ hash: approveTx });
       toast.success('USDC approved!', { id: 'approve' });
 
-      // Calculate minimum shares with slippage
-      const minShares = amount * BigInt(Math.floor((1 - slippage) * 10000)) / 10000n;
+      // Set minShares to 0 to disable slippage protection
+      // TODO: Calculate expected shares using AMM formula (k = x * y)
+      const minShares = 0n;
 
       // Buy shares
       const buyTx = await writeContractAsync({

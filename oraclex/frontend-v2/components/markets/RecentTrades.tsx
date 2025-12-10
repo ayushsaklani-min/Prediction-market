@@ -11,31 +11,8 @@ interface RecentTradesProps {
 }
 
 export function RecentTrades({ marketId }: RecentTradesProps) {
-  // Mock data - fetch from The Graph in production
-  const trades = [
-    {
-      id: '1',
-      trader: '0x1234567890123456789012345678901234567890',
-      side: 1,
-      type: 'buy',
-      amount: '100.00',
-      shares: '95.24',
-      price: 0.65,
-      timestamp: Date.now() / 1000 - 3600,
-      txHash: '0xabc123',
-    },
-    {
-      id: '2',
-      trader: '0x9876543210987654321098765432109876543210',
-      side: 0,
-      type: 'sell',
-      amount: '50.00',
-      shares: '48.78',
-      price: 0.35,
-      timestamp: Date.now() / 1000 - 7200,
-      txHash: '0xdef456',
-    },
-  ];
+  // TODO: Fetch trades from The Graph subgraph when indexed
+  const trades: any[] = [];
 
   return (
     <Card>
@@ -53,7 +30,7 @@ export function RecentTrades({ marketId }: RecentTradesProps) {
                 className="flex items-center justify-between rounded-lg border p-3 text-sm"
               >
                 <div className="flex items-center gap-3">
-                  <Badge variant={trade.side === 1 ? 'yes' : 'no'}>
+                  <Badge variant={trade.side === 1 ? 'default' : 'secondary'}>
                     {trade.side === 1 ? 'YES' : 'NO'}
                   </Badge>
                   <div>

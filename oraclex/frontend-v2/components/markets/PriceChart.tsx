@@ -19,24 +19,13 @@ interface PriceChartProps {
 }
 
 export function PriceChart({ marketId }: PriceChartProps) {
-  // Mock data - in production, fetch from API or The Graph
-  const { data: priceHistory } = useQuery({
+  // Fetch price history from subgraph (when indexed)
+  const { data: priceHistory = [] } = useQuery({
     queryKey: ['price-history', marketId],
     queryFn: async () => {
-      // Generate mock data
-      const now = Date.now();
-      const data = [];
-      for (let i = 30; i >= 0; i--) {
-        const timestamp = now - i * 24 * 60 * 60 * 1000;
-        data.push({
-          timestamp,
-          date: new Date(timestamp).toLocaleDateString(),
-          yesPrice: 0.45 + Math.random() * 0.2,
-          noPrice: 0.55 - Math.random() * 0.2,
-          volume: Math.random() * 10000,
-        });
-      }
-      return data;
+      // TODO: Fetch from The Graph subgraph when indexed
+      // For now, return empty array - price history will show when trades are indexed
+      return [];
     },
   });
 
@@ -53,8 +42,13 @@ export function PriceChart({ marketId }: PriceChartProps) {
           </TabsList>
 
           <TabsContent value="price" className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={priceHistory}>
+            {priceHistory.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Price history will appear once trades are indexed
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={priceHistory}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey="date"
@@ -94,11 +88,17 @@ export function PriceChart({ marketId }: PriceChartProps) {
                 />
               </LineChart>
             </ResponsiveContainer>
+            )}
           </TabsContent>
 
           <TabsContent value="volume" className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={priceHistory}>
+            {priceHistory.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                Volume history will appear once trades are indexed
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={priceHistory}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey="date"
@@ -128,6 +128,7 @@ export function PriceChart({ marketId }: PriceChartProps) {
                 />
               </LineChart>
             </ResponsiveContainer>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

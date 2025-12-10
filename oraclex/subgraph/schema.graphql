@@ -1,0 +1,110 @@
+type Market @entity {
+  id: ID!
+  marketId: Bytes!
+  eventId: String!
+  description: String!
+  category: Int!
+  tags: [String!]!
+  closeTimestamp: BigInt!
+  resolutionTimestamp: BigInt!
+  creator: User!
+  createdAt: BigInt!
+  active: Boolean!
+  settled: Boolean!
+  winningSide: Int
+  
+  yesPool: BigInt!
+  noPool: BigInt!
+  totalVolume: BigInt!
+  totalFees: BigInt!
+  totalLiquidity: BigInt!
+  
+  trades: [Trade!]! @derivedFrom(field: "market")
+  positions: [Position!]! @derivedFrom(field: "market")
+  outcome: Outcome @derivedFrom(field: "market")
+  
+  yesPrice: BigDecimal!
+  noPrice: BigDecimal!
+  
+  updatedAt: BigInt!
+}
+
+type User @entity {
+  id: ID!
+  address: Bytes!
+  marketsCreated: [Market!]! @derivedFrom(field: "creator")
+  trades: [Trade!]! @derivedFrom(field: "trader")
+  positions: [Position!]! @derivedFrom(field: "user")
+  totalVolume: BigInt!
+  totalTrades: Int!
+  createdAt: BigInt!
+}
+
+type Trade @entity {
+  id: ID!
+  market: Market!
+  trader: User!
+  side: Int!
+  isBuy: Boolean!
+  amountIn: BigInt!
+  sharesOut: BigInt!
+  fee: BigInt!
+  price: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type Position @entity {
+  id: ID!
+  market: Market!
+  user: User!
+  side: Int!
+  shares: BigInt!
+  averagePrice: BigDecimal!
+  realizedPnL: BigInt!
+  unrealizedPnL: BigInt!
+  updatedAt: BigInt!
+}
+
+type Outcome @entity {
+  id: ID!
+  market: Market!
+  result: Int!
+  oracle: Bytes!
+  timestamp: BigInt!
+  status: Int!
+  proof: Bytes
+  dispute: Dispute
+}
+
+type Dispute @entity {
+  id: ID!
+  outcome: Outcome!
+  disputer: Bytes!
+  proposedResult: Int!
+  stake: BigInt!
+  timestamp: BigInt!
+  resolved: Boolean!
+  valid: Boolean!
+}
+
+type LiquidityPosition @entity {
+  id: ID!
+  market: Market!
+  provider: User!
+  lpShares: BigInt!
+  yesAmount: BigInt!
+  noAmount: BigInt!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type GlobalStats @entity {
+  id: ID!
+  totalMarkets: Int!
+  totalVolume: BigInt!
+  totalTrades: Int!
+  totalUsers: Int!
+  totalFees: BigInt!
+  updatedAt: BigInt!
+}

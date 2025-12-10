@@ -8,9 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAccount } from 'wagmi';
 import { toast } from 'sonner';
+import { useCreateMarket } from '@/hooks/useCreateMarket';
 
 export default function CreateMarketPage() {
   const { address, isConnected } = useAccount();
+  const { createMarket, isApproving, isCreating } = useCreateMarket();
+  
   const [formData, setFormData] = useState({
     eventId: '',
     description: '',
@@ -40,7 +43,47 @@ export default function CreateMarketPage() {
       return;
     }
 
-    toast.success('Market creation coming soon! Contract integration in progress.');
+    const closeTimestamp = Math.floor(new Date(formData.closeDate).getTime() / 1000);
+    const resolutionTimestamp = Math.floor(new Date(formData.resolutionDate).getTime() / 1000);
+    
+    if (closeTimestamp <= Date.now() / 1000) {
+      toast.error('Close date must be in the future');
+      return;
+    }
+    
+    if (resolutionTimestamp <= closeTimestamp) {
+      toast.error('Resolution date must be after close date');
+      return;
+    }
+    
+    try {
+      await createMarket({
+        eventId: formData.eventId || `market-${Date.now()}`,
+        description: formData.description,
+        category: formData.category,
+        tags: [],
+        closeTimestamp: BigInt(closeTimestamp),
+        resolutionTimestamp: BigInt(resolutionTimestamp),
+        initialYes: formData.initialYes,
+        initialNo: formData.initialNo
+      });
+      
+      toast.success('Market created successfully!');
+      
+      // Reset form
+      setFormData({
+        eventId: '',
+        description: '',
+        category: 0,
+        closeDate: '',
+        resolutionDate: '',
+        initialYes: '100',
+        initialNo: '100',
+      });
+    } catch (error: any) {
+      console.error('Market creation error:', error);
+      toast.error(error.message || 'Failed to create market');
+    }
   };
 
   return (
@@ -160,9 +203,15 @@ export default function CreateMarketPage() {
               type="submit" 
               className="w-full" 
               size="lg" 
-              disabled={!isConnected}
+              disabled={!isConnected || isApproving || isCreating}
             >
-              {isConnected ? 'Create Market' : 'Connect Wallet'}
+              {!isConnected 
+                ? 'Connect Wallet' 
+                : isApproving 
+                ? 'Approving USDC...' 
+                : isCreating 
+                ? 'Creating Market...' 
+                : 'Create Market'}
             </Button>
 
             {!isConnected && (

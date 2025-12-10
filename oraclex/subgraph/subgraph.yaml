@@ -1,0 +1,80 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: MarketFactoryV2
+    network: mumbai
+    source:
+      address: "0x82032757239F37E6c42D5098c115EcD67Ce587A7"
+      abi: MarketFactoryV2
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - User
+      abis:
+        - name: MarketFactoryV2
+          file: ../artifacts-v2/contracts-v2/MarketFactoryV2.sol/MarketFactoryV2.json
+      eventHandlers:
+        - event: MarketCreated(indexed bytes32,string,string,uint8,indexed address,uint256)
+          handler: handleMarketCreated
+        - event: MarketClosed(indexed bytes32)
+          handler: handleMarketClosed
+      file: ./src/market-factory.ts
+  - kind: ethereum
+    name: PredictionAMM
+    network: mumbai
+    source:
+      address: "0x6A3b46fb08eb31e2811d447EEd0550b5d66c3487"
+      abi: PredictionAMM
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Market
+        - Trade
+        - Position
+      abis:
+        - name: PredictionAMM
+          file: ../artifacts-v2/contracts-v2/PredictionAMM.sol/PredictionAMM.json
+      eventHandlers:
+        - event: Trade(indexed bytes32,indexed address,uint8,bool,uint256,uint256,uint256)
+          handler: handleTrade
+        - event: MarketSettled(indexed bytes32,uint8)
+          handler: handleMarketSettled
+        - event: LiquidityAdded(indexed bytes32,indexed address,uint256,uint256,uint256)
+          handler: handleLiquidityAdded
+        - event: LiquidityRemoved(indexed bytes32,indexed address,uint256,uint256,uint256)
+          handler: handleLiquidityRemoved
+      file: ./src/prediction-amm.ts
+  - kind: ethereum
+    name: OracleAdapterV2
+    network: mumbai
+    source:
+      address: "0xEF765a5524558A6aDB5ACECD936373c0182eE6Fc"
+      abi: OracleAdapterV2
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Outcome
+        - Dispute
+      abis:
+        - name: OracleAdapterV2
+          file: ../artifacts-v2/contracts-v2/OracleAdapterV2.sol/OracleAdapterV2.json
+      eventHandlers:
+        - event: OutcomeProposed(indexed bytes32,uint8,indexed address,uint256)
+          handler: handleOutcomeProposed
+        - event: OutcomeChallenged(indexed bytes32,indexed address,uint8)
+          handler: handleOutcomeChallenged
+        - event: MarketFinalized(indexed bytes32,uint8)
+          handler: handleMarketFinalized
+      file: ./src/oracle-adapter.ts

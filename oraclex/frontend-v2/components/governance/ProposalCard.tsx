@@ -130,7 +130,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
         {proposal.status === 'active' && (
           <div className="grid grid-cols-3 gap-2">
             <Button
-              variant="yes"
+              variant="default"
               size="sm"
               onClick={() => handleVote('for')}
               disabled={isVoting}
@@ -139,7 +139,7 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
               For
             </Button>
             <Button
-              variant="no"
+              variant="destructive"
               size="sm"
               onClick={() => handleVote('against')}
               disabled={isVoting}

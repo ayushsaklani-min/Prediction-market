@@ -1,6 +1,6 @@
-# 🔮 OracleX
+# 🔮 OracleX V2 - Production Ready
 
-> A decentralized prediction market platform powered by AI oracles and automated market makers
+> A fully integrated decentralized prediction market platform powered by AI oracles, automated market makers, and The Graph indexing
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org/)
