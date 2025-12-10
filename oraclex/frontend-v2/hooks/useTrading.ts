@@ -1,14 +1,15 @@
 'use client';
 
-import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient, useAccount } from 'wagmi';
 import { parseUnits } from 'viem';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, CHAIN_CONFIG } from '@/config/contracts';
 import { PREDICTION_AMM_ABI, USDC_ABI } from '@/lib/abis';
 import { toast } from 'sonner';
 
 export function useBuyShares() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { chain } = useAccount();
 
   const buy = async (
     marketId: string,
@@ -17,9 +18,23 @@ export function useBuyShares() {
     slippage: number = 0.01
   ) => {
     try {
+      // Check if wallet is on correct network
+      if (chain?.id !== CHAIN_CONFIG.chainId) {
+        toast.error(`Please switch to Polygon Amoy Testnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
+        throw new Error('Wrong network');
+      }
+
       const amount = parseUnits(amountUSDC, 6);
 
+      // Debug: Log contract addresses
+      console.log('USDC Address:', CONTRACTS.USDC);
+      console.log('PredictionAMM Address:', CONTRACTS.PredictionAMM);
+      console.log('Amount to approve:', amount.toString());
+      console.log('Current Chain ID:', chain?.id);
+
       // First, approve USDC
+      toast.loading('Approving USDC...', { id: 'approve' });
+      
       const approveTx = await writeContractAsync({
         address: CONTRACTS.USDC,
         abi: USDC_ABI,
@@ -27,7 +42,6 @@ export function useBuyShares() {
         args: [CONTRACTS.PredictionAMM, amount],
       });
 
-      toast.loading('Approving USDC...', { id: 'approve' });
       await publicClient?.waitForTransactionReceipt({ hash: approveTx });
       toast.success('USDC approved!', { id: 'approve' });
 

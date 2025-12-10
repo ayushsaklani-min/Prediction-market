@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useWriteContract, usePublicClient } from 'wagmi';
+import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { parseUnits } from 'viem';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, CHAIN_CONFIG } from '@/config/contracts';
 import { MARKET_FACTORY_ABI, USDC_ABI } from '@/lib/abis';
 import { toast } from 'sonner';
 
@@ -21,16 +21,28 @@ interface CreateMarketParams {
 export function useCreateMarket() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { chain } = useAccount();
   const [isApproving, setIsApproving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const createMarket = async (params: CreateMarketParams) => {
     try {
+      // Check if wallet is on correct network
+      if (chain?.id !== CHAIN_CONFIG.chainId) {
+        toast.error(`Please switch to Polygon Amoy Testnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
+        throw new Error('Wrong network');
+      }
+
       const initialYes = parseUnits(params.initialYes, 6);
       const initialNo = parseUnits(params.initialNo, 6);
       const totalLiquidity = initialYes + initialNo;
       const creationFee = parseUnits('10', 6); // 10 USDC
       const totalCost = totalLiquidity + creationFee;
+
+      console.log('USDC Address:', CONTRACTS.USDC);
+      console.log('MarketFactory Address:', CONTRACTS.MarketFactory);
+      console.log('Total cost:', totalCost.toString());
+      console.log('Current Chain ID:', chain?.id);
 
       // Step 1: Approve USDC for total cost
       setIsApproving(true);
