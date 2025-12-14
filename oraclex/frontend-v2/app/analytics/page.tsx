@@ -1,52 +1,52 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { querySubgraph, queries } from '@/lib/api';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { data: globalStats } = useQuery({
-    queryKey: ['global-stats'],
-    queryFn: () => querySubgraph<any>(queries.GET_GLOBAL_STATS, {}),
-    refetchInterval: 30000,
-  });
+  const { data: analytics, isLoading } = useAnalytics();
 
-  const { data: markets } = useQuery({
-    queryKey: ['all-markets-analytics'],
-    queryFn: () => querySubgraph<any>(queries.GET_MARKETS, { 
-      first: 1000, 
-      skip: 0,
-      orderBy: 'createdAt',
-      orderDirection: 'desc'
-    }),
-    refetchInterval: 30000,
-  });
+  if (isLoading) {
+    return (
+      <div className="container flex min-h-[60vh] items-center justify-center py-8">
+        <div className="text-center">
+          <div className="mb-4 text-lg">Loading analytics...</div>
+        </div>
+      </div>
+    );
+  }
 
-  const stats = (globalStats as any)?.globalStats;
-  const marketData = (markets as any)?.markets || [];
+  if (!analytics) {
+    return (
+      <div className="container flex min-h-[60vh] items-center justify-center py-8">
+        <div className="text-center">
+          <div className="mb-4 text-lg">No data available</div>
+        </div>
+      </div>
+    );
+  }
+
+  const marketData = analytics.markets || [];
 
   // Calculate category distribution
-  const categoryData = [
-    { name: 'Crypto', value: marketData.filter((m: any) => m.category === 0).length },
-    { name: 'Sports', value: marketData.filter((m: any) => m.category === 1).length },
-    { name: 'Politics', value: marketData.filter((m: any) => m.category === 2).length },
-    { name: 'Entertainment', value: marketData.filter((m: any) => m.category === 3).length },
-    { name: 'Science', value: marketData.filter((m: any) => m.category === 4).length },
-    { name: 'Other', value: marketData.filter((m: any) => m.category === 5).length },
-  ].filter(c => c.value > 0);
+  const categoryNames = ['Sports', 'Politics', 'Crypto', 'Entertainment', 'Science', 'Other'];
+  const categoryData = categoryNames
+    .map((name, index) => ({
+      name,
+      value: marketData.filter((m: any) => m.category === index).length,
+    }))
+    .filter(c => c.value > 0);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
-  // Volume over time
-  const volumeData = marketData
-    .sort((a: any, b: any) => parseInt(a.createdAt) - parseInt(b.createdAt))
-    .map((m: any, i: number) => ({
-      date: new Date(parseInt(m.createdAt) * 1000).toLocaleDateString(),
-      volume: Number(m.totalVolume) / 1e6,
-      cumulative: marketData.slice(0, i + 1).reduce((sum: number, market: any) => sum + Number(market.totalVolume) / 1e6, 0)
-    }));
+  // Volume over time (simplified since we don't have timestamps)
+  const volumeData = marketData.map((m: any, i: number) => ({
+    market: `Market ${i + 1}`,
+    volume: Number(m.totalVolume) / 1e6,
+    cumulative: marketData.slice(0, i + 1).reduce((sum: number, market: any) => sum + Number(market.totalVolume) / 1e6, 0)
+  }));
 
   // Top markets by volume
   const topMarkets = [...marketData]
@@ -69,9 +69,9 @@ export default function AnalyticsPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalMarkets || 0}</div>
+            <div className="text-2xl font-bold">{analytics.totalMarkets}</div>
             <p className="text-xs text-muted-foreground">
-              {marketData.filter((m: any) => m.active).length} active
+              {analytics.activeMarkets} active
             </p>
           </CardContent>
         </Card>
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${((Number(stats?.totalVolume || 0) / 1e6).toFixed(2))}
+              ${(analytics.totalVolume / 1e6).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               USDC traded
@@ -93,26 +93,30 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Liquidity</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalTrades || 0}</div>
+            <div className="text-2xl font-bold">
+              ${(analytics.totalLiquidity / 1e6).toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              All time
+              USDC locked
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Avg Volume</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+            <div className="text-2xl font-bold">
+              ${analytics.totalMarkets > 0 ? (analytics.totalVolume / 1e6 / analytics.totalMarkets).toFixed(2) : '0.00'}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Unique traders
+              Per market
             </p>
           </CardContent>
         </Card>
@@ -127,14 +131,20 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={volumeData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Area type="monotone" dataKey="cumulative" stroke="#8884d8" fill="#8884d8" name="Cumulative Volume (USDC)" />
-              </AreaChart>
+              {volumeData.length > 0 ? (
+                <AreaChart data={volumeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="market" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Area type="monotone" dataKey="cumulative" stroke="#8884d8" fill="#8884d8" name="Cumulative Volume (USDC)" />
+                </AreaChart>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No volume data yet
+                </div>
+              )}
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -146,23 +156,29 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => `${entry.name}: ${entry.value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+              {categoryData.length > 0 ? (
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.name}: ${entry.value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No markets yet
+                </div>
+              )}
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -174,14 +190,20 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={topMarkets}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="volume" fill="#8884d8" name="Volume (USDC)" />
-              </BarChart>
+              {topMarkets.length > 0 ? (
+                <BarChart data={topMarkets}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="volume" fill="#8884d8" name="Volume (USDC)" />
+                </BarChart>
+              ) : (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  No markets with volume yet
+                </div>
+              )}
             </ResponsiveContainer>
           </CardContent>
         </Card>
