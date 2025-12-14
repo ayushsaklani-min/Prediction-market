@@ -31,8 +31,9 @@ export function useMarketDetail(marketId: string) {
         }) as any;
 
         // Calculate prices
-        const yesReserve = Number(ammData[0]) / 1e18;
-        const noReserve = Number(ammData[1]) / 1e18;
+        // ammData: [marketId, yesPool, noPool, k, totalVolume, totalFees, active, settled, winningSide]
+        const yesReserve = Number(ammData[1]) / 1e18;
+        const noReserve = Number(ammData[2]) / 1e18;
         const totalReserve = yesReserve + noReserve;
         
         const yesPrice = totalReserve > 0 ? noReserve / totalReserve : 0.5;
@@ -51,10 +52,10 @@ export function useMarketDetail(marketId: string) {
           winningSide: marketData[8],
           yesPrice,
           noPrice,
-          yesReserve: ammData[0],
-          noReserve: ammData[1],
-          totalLiquidity: ammData[2],
-          totalVolume: ammData[3],
+          yesReserve: ammData[1],
+          noReserve: ammData[2],
+          totalLiquidity: (Number(ammData[1]) + Number(ammData[2])) / 1e18, // Sum of reserves in shares
+          totalVolume: ammData[4], // USDC with 6 decimals
           trades: [], // We don't have trade history without subgraph
         };
       } catch (error) {

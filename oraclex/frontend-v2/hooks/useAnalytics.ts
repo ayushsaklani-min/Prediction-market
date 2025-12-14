@@ -59,20 +59,23 @@ export function useAnalytics() {
             args: [marketId],
           }) as any;
 
+          // ammData: [marketId, yesPool, noPool, k, totalVolume, totalFees, active, settled, winningSide]
+          const liquidity = (Number(ammData[1]) + Number(ammData[2])) / 1e18; // Sum of reserves in shares
+
           const market = {
             id: marketId,
             description: marketData[1],
             category: Number(marketData[2]),
             active: marketData[6],
             settled: marketData[7],
-            totalVolume: ammData[3],
-            totalLiquidity: ammData[2],
+            totalVolume: ammData[4], // USDC with 6 decimals
+            totalLiquidity: BigInt(Math.floor(liquidity * 1e6)), // Convert to USDC units
             createdAt: Date.now(), // We don't have creation timestamp on-chain
           };
 
           markets.push(market);
-          totalVolume += ammData[3];
-          totalLiquidity += ammData[2];
+          totalVolume += ammData[4]; // USDC volume
+          totalLiquidity += BigInt(Math.floor(liquidity * 1e6)); // USDC liquidity
           if (marketData[6]) activeCount++;
         }
 
