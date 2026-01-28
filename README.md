@@ -1,295 +1,114 @@
-# 🔮 OracleX V2 - Production Ready
+# 🔮 OracleX - Decentralized Forecasting Protocol
 
-> A fully integrated decentralized prediction market platform powered by AI oracles, automated market makers, and The Graph indexing
+> **Status:** Live on Polygon Mainnet (Test Mode)
+> **Version:** v2.0.0 (Beta)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Network: Polygon](https://img.shields.io/badge/Network-Polygon%20Mainnet-8247E5)](https://polygon.technology/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-15.0-black)](https://nextjs.org/)
-[![Hardhat](https://img.shields.io/badge/Hardhat-2.22-yellow)](https://hardhat.org/)
 
-## 🌟 Overview
+## Protocol Overview
 
-OracleX is a next-generation prediction market platform that combines decentralized finance with AI-powered insights. Built on Polygon, it enables users to create, trade, and settle prediction markets with automated market making, governance participation, and transparent fee distribution.
-
-## ✨ Key Features
-
-### 🎯 Prediction Markets
-- **AMM-Based Trading**: Automated market maker for efficient price discovery
-- **Market Creation**: Anyone can create prediction markets with customizable parameters
-- **Position Management**: Buy and sell YES/NO positions with real-time pricing
-- **AI Insights**: Chainlink-powered AI oracle provides market analysis and predictions
-
-### �️ Governantce
-- **ORX Token**: Native governance token for platform participation
-- **veORX Staking**: Vote-escrowed tokens for enhanced governance rights
-- **On-Chain Voting**: Decentralized proposal creation and voting system
-- **Treasury Management**: Community-controlled protocol treasury
-
-### 💰 Economics
-- **Fee Distribution**: Automated fee collection and distribution to stakeholders
-- **Treasury System**: Protocol-owned liquidity and reserve management
-- **Staking Rewards**: Earn rewards by locking ORX tokens
-- **USDC Settlement**: All markets settle in USDC for stability
-
-### 🔐 Security & Verification
-- **Oracle Verification**: Multi-layered oracle system for accurate market settlement
-- **Chainlink Integration**: Decentralized oracle network for external data
-- **Admin Controls**: Emergency pause and system management capabilities
-- **Audited Contracts**: Comprehensive test coverage and security measures
-
-## 🏗️ Architecture
-
-```
-oraclex/
-├── contracts-v2/           # Smart contracts (Solidity 0.8.24)
-│   ├── ORXToken.sol       # Governance token
-│   ├── veORX.sol          # Vote-escrowed token
-│   ├── PredictionAMM.sol  # Automated market maker
-│   ├── MarketFactoryV2.sol # Market creation
-│   ├── MarketPositions.sol # Position tracking
-│   ├── Governance.sol     # On-chain governance
-│   ├── Treasury.sol       # Protocol treasury
-│   └── FeeDistributor.sol # Fee distribution
-│
-├── frontend-v2/           # Next.js frontend
-│   ├── app/              # App router pages
-│   ├── components/       # React components
-│   ├── hooks/           # Custom React hooks
-│   └── lib/             # Utilities and ABIs
-│
-├── chainlink-functions/  # Chainlink oracle functions
-│   ├── ai-oracle.js     # AI-powered insights
-│   └── settlement-oracle.js # Market settlement
-│
-├── scripts-v2/          # Deployment and utility scripts
-├── test-v2/            # Contract tests
-└── supabase/           # Off-chain data storage
-```
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- MetaMask or compatible Web3 wallet
-- Polygon Amoy testnet MATIC (for testing)
-
-### Installation
-
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/oraclex.git
-cd oraclex
-```
-
-2. Install dependencies
-```bash
-npm install
-cd frontend-v2 && npm install
-```
-
-3. Configure environment variables
-```bash
-# Root .env
-cp .env.example .env
-# Add your private key, RPC URL, and API keys
-
-# Frontend .env.local
-cd frontend-v2
-cp .env.example .env.local
-# Add contract addresses and configuration
-```
-
-### Smart Contract Development
-
-Compile contracts:
-```bash
-npm run compile:v2
-```
-
-Run tests:
-```bash
-npm run test:hh
-```
-
-Deploy to Polygon Amoy:
-```bash
-npx hardhat run scripts-v2/deploy-v2.js --network amoy
-```
-
-### Frontend Development
-
-Start the development server:
-```bash
-npm run start:frontend
-```
-
-Build for production:
-```bash
-npm run build:frontend
-```
-
-The application will be available at `http://localhost:3000`
-
-## 📦 Tech Stack
-
-### Smart Contracts
-- **Solidity 0.8.24**: Smart contract language
-- **Hardhat**: Development environment
-- **OpenZeppelin**: Security-audited contract libraries
-- **Chainlink**: Decentralized oracle network
-
-### Frontend
-- **Next.js 15**: React framework with App Router
-- **TypeScript**: Type-safe development
-- **TailwindCSS**: Utility-first styling
-- **Radix UI**: Accessible component primitives
-- **RainbowKit**: Wallet connection
-- **Wagmi & Viem**: Ethereum interactions
-- **Recharts**: Data visualization
-- **Framer Motion**: Animations
-
-### Backend & Infrastructure
-- **Supabase**: Off-chain data storage
-- **Polygon**: Layer 2 blockchain
-- **IPFS**: Decentralized storage (planned)
-
-## 🎮 Usage
-
-### Creating a Market
-
-1. Connect your wallet
-2. Navigate to "Create Market"
-3. Define your prediction question
-4. Set market parameters (duration, category, etc.)
-5. Deposit initial liquidity
-6. Submit transaction
-
-### Trading Positions
-
-1. Browse available markets
-2. Select a market to view details
-3. Choose YES or NO position
-4. Enter trade amount
-5. Review price impact and fees
-6. Execute trade
-
-### Governance Participation
-
-1. Acquire ORX tokens
-2. Lock tokens to receive veORX
-3. Browse active proposals
-4. Vote on proposals
-5. Earn staking rewards
-
-## 🔧 Configuration
-
-### Network Configuration
-
-The platform supports multiple networks:
-- **Hardhat**: Local development (chainId: 31337)
-- **Polygon Amoy**: Testnet (chainId: 80002)
-- **Polygon Mainnet**: Production (chainId: 137)
-
-### Contract Addresses
-
-#### Polygon Amoy Testnet (ChainID: 80002)
-
-| Contract | Address | Explorer |
-|----------|---------|----------|
-| ORX Token | `0xf5f5424A78657E374F1018307c07323696e3A6b3` | [View](https://amoy.polygonscan.com/address/0xf5f5424A78657E374F1018307c07323696e3A6b3) |
-| veORX | `0x351dA233FaF06B43440E35EE6d48721bfBD3Ca92` | [View](https://amoy.polygonscan.com/address/0x351dA233FaF06B43440E35EE6d48721bfBD3Ca92) |
-| Market Factory | `0x82032757239F37E6c42D5098c115EcD67Ce587A7` | [View](https://amoy.polygonscan.com/address/0x82032757239F37E6c42D5098c115EcD67Ce587A7) |
-| Market Positions | `0x81282b3d5acA181c27028e57917D18145abf1be4` | [View](https://amoy.polygonscan.com/address/0x81282b3d5acA181c27028e57917D18145abf1be4) |
-| Prediction AMM | `0x6A3b46fb08eb31e2811d447EEd0550b5d66c3487` | [View](https://amoy.polygonscan.com/address/0x6A3b46fb08eb31e2811d447EEd0550b5d66c3487) |
-| Treasury | `0xE0880C17bE8c6c5dd5611440299A4e5d223a488f` | [View](https://amoy.polygonscan.com/address/0xE0880C17bE8c6c5dd5611440299A4e5d223a488f) |
-| Fee Distributor | `0x53756cfd49Cc9354C10cafddD0d6a63Fe77a6bdf` | [View](https://amoy.polygonscan.com/address/0x53756cfd49Cc9354C10cafddD0d6a63Fe77a6bdf) |
-| Oracle Adapter | `0xEF765a5524558A6aDB5ACECD936373c0182eE6Fc` | [View](https://amoy.polygonscan.com/address/0xEF765a5524558A6aDB5ACECD936373c0182eE6Fc) |
-| Verifier | `0x40365fbda82Fa5284B5Ae8d9458d77737c423112` | [View](https://amoy.polygonscan.com/address/0x40365fbda82Fa5284B5Ae8d9458d77737c423112) |
-| USDC (Testnet) | `0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582` | [View](https://amoy.polygonscan.com/address/0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582) |
-
-These addresses are configured in `frontend-v2/.env.local` and are deployed on Polygon Amoy testnet for testing purposes.
-
-## 🧪 Testing
-
-Run the full test suite:
-```bash
-npm run test:hh
-```
-
-Generate gas reports:
-```bash
-REPORT_GAS=true npm run test:hh
-```
-
-Check contract sizes:
-```bash
-npm run compile:v2
-```
-
-## 📊 Smart Contract Features
-
-### PredictionAMM
-- Constant product market maker (x * y = k)
-- Dynamic fee adjustment based on liquidity
-- Slippage protection
-- Position minting and burning
-
-### Governance
-- Proposal creation with minimum veORX threshold
-- Time-locked voting periods
-- Quorum requirements
-- Execution delays for security
-
-### Treasury
-- Multi-signature controls
-- Fee collection from all markets
-- Strategic reserve management
-- Emergency withdrawal capabilities
-
-## 🛣️ Roadmap
-
-- [ ] Multi-chain deployment (Arbitrum, Optimism)
-- [ ] Advanced market types (scalar, categorical)
-- [ ] Mobile app (React Native)
-- [ ] API for third-party integrations
-- [ ] Enhanced AI oracle capabilities
-- [ ] Liquidity mining programs
-- [ ] Cross-chain bridge integration
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure:
-- Code follows existing style conventions
-- All tests pass
-- New features include tests
-- Documentation is updated
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- **Live App (Vercel)**: [https://zkevm-eta.vercel.app/](https://zkevm-eta.vercel.app/)
-- **Live App (Render)**: [https://zkevm-1.onrender.com/](https://zkevm-1.onrender.com/)
-
-## 🙏 Acknowledgments
-
-- OpenZeppelin for secure contract libraries
-- Chainlink for decentralized oracle infrastructure
-- Polygon for scalable blockchain infrastructure
-- The entire DeFi and prediction market community
+OracleX is a decentralized prediction market protocol built on Polygon. It utilizes an Automated Market Maker (AMM) for instant liquidity and verifiable AI agents for market resolution. The protocol allows users to trade positions on future events with a focus on institutional-grade security and transparent settlement.
 
 ---
 
-Built for polygon by the ayushsaklani
+## � Mainnet Deployment
+
+**User Interface:** [https://zkevm-eta.vercel.app](https://zkevm-eta.vercel.app)
+
+### Smart Contract Registry (Chain ID: 137)
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **Prediction AMM** | `0xB1B67563960fDD68BadeEb769Bf9b5A3D39aa81A` | [View ↗](https://polygonscan.com/address/0xB1B67563960fDD68BadeEb769Bf9b5A3D39aa81A) |
+| **Market Factory** | `0x34a4d275549F4B243427793d7dd07A3DC8b7358E` | [View ↗](https://polygonscan.com/address/0x34a4d275549F4B243427793d7dd07A3DC8b7358E) |
+| **Oracle Adapter** | `0x695Bb36D976629E6d46C8E1E1De24C1dCD4Fa517` | [View ↗](https://polygonscan.com/address/0x695Bb36D976629E6d46C8E1E1De24C1dCD4Fa517) |
+| **Notifier/Verifier** | `0x862eD35DBA824AfB27564d8ad3A3D7cF1302D0Ca` | [View ↗](https://polygonscan.com/address/0x862eD35DBA824AfB27564d8ad3A3D7cF1302D0Ca) |
+| **ORX Token** | `0x1D2306f42DB68Ac09d1305b98C63ca3F997076bD` | [View ↗](https://polygonscan.com/address/0x1D2306f42DB68Ac09d1305b98C63ca3F997076bD) |
+| **veORX (Staking)** | `0x2C61bc6be0741256dde76a42Fc143D6709737656` | [View ↗](https://polygonscan.com/address/0x2C61bc6be0741256dde76a42Fc143D6709737656) |
+| **Treasury** | `0xEB0F09C0817F75Be039275f3E3C93CdAc3FF3fc5` | [View ↗](https://polygonscan.com/address/0xEB0F09C0817F75Be039275f3E3C93CdAc3FF3fc5) |
+| **TestUSDC** | `0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6` | [View ↗](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6) |
+
+> **Note:** The current deployment uses **TestUSDC** for settlement to allow risk-free testing on the mainnet environment.
+>
+> 🔹 **Get Free TestUSDC:** Mint tokens via the [PolygonScan Explorer](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6#writeContract) (Connect Web3 -> Write `mint` function).
+> 🔹 **Launch App:** [zkevm-eta.vercel.app](https://zkevm-eta.vercel.app)
+
+---
+
+## � Technical Roadmap
+
+We are actively developing the following core upgrades to transition from a beta application to a robust forecasting infrastructure.
+
+### 1. Multi-path Oracle Resolution
+*Implementation of a decentralized consensus mechanism for market settlement.*
+*   **Quorum System:** Resolution requires agreement from independent AI agents and Chainlink feeds.
+*   **On-Chain Verification:** Data sources and confidence scores are published on-chain.
+*   **Dispute Mechanism:** Bonded challengers can dispute results, triggering a DAO fallback vote.
+
+### 2. Advanced Market Structures
+*Expanding reliable market types beyond binary options.*
+*   **Scalar Markets:** Numerical range predictions (e.g., Asset Prices, Temperature).
+*   **Categorical Markets:** Single-winner selection from multiple mutually exclusive outcomes.
+*   **Time-Weighted Markets:** Settlement based on TWAP (Time-Weighted Average Price) outcomes.
+
+### 3. AMM v2 Specifications
+*Optimizing capital efficiency and market stability.*
+*   **Dynamic Fee Model:** Trading fees automatically adjust based on localized volatility.
+*   **Liquidity Depth Pricing:** Algorithmic curves to minimize slippage in thin markets.
+*   **LMSR Integration:** Optional backend support for Logarithmic Market Scoring Rules.
+
+### 4. Protocol Incentives
+*Sustainable economic models for liquidity provision.*
+*   **veORX Boosting:** Multipliers on LP rewards for long-term token lockers.
+*   **Creator Royalties:** Configurable fee sharing for market creators.
+*   **Bootstrapping Rebates:** Fee rebates for initial liquidity providers.
+
+### 5. Governance Security
+*Hardening the protocol against governance attacks.*
+*   **Dual DAO Architecture:** Separation of technical "Oracle DAO" and parameter-setting "Protocol DAO".
+*   **Execution Timelocks:** Mandatory delays for critical parameter changes.
+*   **Security Council:** Emergency veto powers for malicious proposals.
+
+### 6. Risk Management Layer
+*Automated safety features for user protection.*
+*   **Exposure Caps:** Protocol-level limits on maximum open interest per market.
+*   **Circuit Breakers:** Automatic trading pauses upon detection of oracle anomalies.
+*   **Per-Market Insurance:** Isolated insurance funds for settlement failures.
+
+### 7. User Experience Enhancements
+*Data-rich interfaces for traders.*
+*   **Historical Analytics:** Dashboards tracking oracle accuracy and resolution times.
+*   **Market Depth Charts:** Visualization of liquidity concentration.
+*   **Pro Mode:** Advanced trading terminal interface.
+
+### 8. Compliance Architecture
+*Features for regulatory adaptability.*
+*   **Geo-Fencing Hooks:** Frontend support for jurisdiction-based access restriction.
+*   **Permissioned Pools:** Optional KYC gating for institutional markets.
+*   **Non-Custodial Logic:** Strict separation of user funds from protocol treasury.
+
+### 9. Developer Ecosystem
+*Tools for third-party integration.*
+*   **OracleX SDK:** TypeScript libraries for market creation and trading.
+*   **Subgraph Index:** Public GraphQL endpoint for real-time market data.
+*   **Builder API:** REST endpoints for automated market management.
+
+---
+
+## ⚡ Quick Start
+
+To interact with the protocol on Polygon Mainnet:
+
+1.  **Configure Wallet:** Ensure MetaMask is connected to Polygon Mainnet (Chain ID 137).
+2.  **Acquire Assets:**
+    *   **MATIC:** Required for gas fees.
+    *   **TestUSDC:** Mintable via the [Etherscan Write Contract](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6#writeContract) interface (function `mint`).
+3.  **Launch App:** Navigate to [zkevm-eta.vercel.app](https://zkevm-eta.vercel.app).
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
