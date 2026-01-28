@@ -1,69 +1,56 @@
 # Dependencies
-node_modules/
+node_modules
 .pnp
 .pnp.js
 
 # Testing
-coverage/
-.nyc_output
+coverage
 
-# Production
-build/
-dist/
+# Next.js
 .next/
 out/
+build/
 
-# Environment variables
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env*.local
 .env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Hardhat
-cache/
-cache-v2/
-artifacts/
-artifacts-v2/
-typechain/
-typechain-types/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-
-# OS
-.DS_Store
-*.pem
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Misc
-.cache/
-.temp/
-tmp/
-
-# OpenZeppelin
-.openzeppelin/*.json
-!.openzeppelin/unknown-*.json
-
-# Subgraph
-subgraph/build/
-subgraph/generated/
-
 # Vercel
 .vercel
 
-# Local development
-*.local
+# Hardhat
+artifacts/
+artifacts-v2/
+cache/
+cache-v2/
+typechain-types/
+
+# OpenZeppelin
+.openzeppelin/
+
+# Deployment artifacts
+deployed-final.json
+
+# Helper scripts (keep only core deployment scripts)
+scripts-v2/check-*.js
+scripts-v2/scan-*.cjs
+scripts-v2/clear-*.cjs
+scripts-v2/fix-*.js
+scripts-v2/deploy-fast.js
+scripts-v2/deploy-full-setup.js
+scripts-v2/deploy-remaining.js
+scripts-v2/deploy-single-*.js
+scripts-v2/deploy-test-*.js
+scripts-v2/mint-*.js

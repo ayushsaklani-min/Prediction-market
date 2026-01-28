@@ -17,6 +17,15 @@ export function useMarkets() {
       if (!publicClient) return [];
 
       try {
+        // Check network
+        const chainId = await publicClient.getChainId();
+        console.log('Connected to chain ID:', chainId);
+
+        if (chainId !== 137) {
+          console.warn('Wrong network! Please connect to Polygon Mainnet (Chain ID: 137)');
+          return [];
+        }
+
         // Get total number of markets
         const marketCount = await publicClient.readContract({
           address: CONTRACTS.MarketFactory,
@@ -25,6 +34,8 @@ export function useMarkets() {
         }) as bigint;
 
         const count = Number(marketCount);
+        console.log('Total markets:', count);
+
         if (count === 0) return [];
 
         // Fetch all market IDs
@@ -90,11 +101,18 @@ export function useMarkets() {
         return markets.filter((m): m is Market => m !== null);
       } catch (error) {
         console.error('Error fetching markets:', error);
+
+        // Check if it's a network error
+        if (error instanceof Error && error.message.includes('returned no data')) {
+          console.error('Contract not found or wrong network. Please ensure you are connected to Polygon Mainnet.');
+        }
+
         return [];
       }
     },
     enabled: !!publicClient,
     refetchInterval: 10000,
+    retry: 1,
   });
 }
 

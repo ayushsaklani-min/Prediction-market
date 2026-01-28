@@ -1,0 +1,7 @@
+{
+    "version": 2,
+    "framework": "nextjs",
+    "buildCommand": "cd frontend-v2 && npm install && npm run build",
+    "outputDirectory": "frontend-v2/.next",
+    "ignoreCommand": "git diff --quiet HEAD^ HEAD ./"
+}
