@@ -20,7 +20,7 @@ export function useBuyShares() {
     try {
       // Check if wallet is on correct network
       if (chain?.id !== CHAIN_CONFIG.chainId) {
-        toast.error(`Please switch to Polygon Amoy Testnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
+        toast.error(`Please switch to Polygon Mainnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
         throw new Error('Wrong network');
       }
 
@@ -34,7 +34,7 @@ export function useBuyShares() {
 
       // First, approve USDC
       toast.loading('Approving USDC...', { id: 'approve' });
-      
+
       const approveTx = await writeContractAsync({
         address: CONTRACTS.USDC,
         abi: USDC_ABI,
