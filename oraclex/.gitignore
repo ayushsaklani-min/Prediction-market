@@ -39,6 +39,9 @@ cache/
 cache-v2/
 typechain-types/
 
+# Subgraph generated code
+subgraph/generated/
+
 # OpenZeppelin
 .openzeppelin/
 
