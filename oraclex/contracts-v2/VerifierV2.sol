@@ -6,8 +6,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title Verifier V2
-    /// @notice Verifies AI commitments and cryptographic proofs
-    /// @dev Supports hash/signature verification. Advanced proof types fail closed until implemented.
+/// @notice Verifies AI commitments and cryptographic proofs
+/// @dev Supports hash/signature verification. Advanced proof types fail closed until implemented.
 contract VerifierV2 is
     Initializable,
     AccessControlUpgradeable,
