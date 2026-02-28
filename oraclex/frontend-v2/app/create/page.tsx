@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useCreateMarket } from '@/hooks/useCreateMarket';
 
 export default function CreateMarketPage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const { createMarket, isApproving, isCreating } = useCreateMarket();
   
   const [formData, setFormData] = useState({

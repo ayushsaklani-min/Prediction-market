@@ -12,6 +12,19 @@ interface IMarketPositions {
     function mint(address to, uint256 tokenId, uint256 amount) external;
     function burn(address from, uint256 tokenId, uint256 amount) external;
     function balanceOf(address account, uint256 id) external view returns (uint256);
+    function totalSupply(uint256 id) external view returns (uint256);
+}
+
+interface IMarketFactoryV2 {
+    function getMarket(bytes32 marketId) external view returns (
+        string memory eventId,
+        string memory description,
+        uint8 category,
+        uint256 closeTimestamp,
+        uint256 resolutionTimestamp,
+        address creator,
+        bool active
+    );
 }
 
 /// @title Prediction AMM (Constant Function Market Maker)
@@ -30,6 +43,7 @@ contract PredictionAMM is
 
     IERC20 public usdc;
     IMarketPositions public positions;
+    IMarketFactoryV2 public marketFactory;
     address public treasury;
     address public feeDistributor;
 
@@ -47,6 +61,9 @@ contract PredictionAMM is
         bool active;
         bool settled;
         uint8 winningSide; // 0 = NO, 1 = YES
+        uint256 winnerPayoutPool; // Reserved collateral for winning share redemptions
+        uint256 winningSharesRemaining; // Remaining winning shares eligible for redemption
+        uint256 lpCollateralPool; // Residual collateral withdrawable by LPs after winner reserve
     }
 
     mapping(bytes32 => Market) public markets;
@@ -66,6 +83,7 @@ contract PredictionAMM is
     event LiquidityAdded(bytes32 indexed marketId, address indexed provider, uint256 yesAmount, uint256 noAmount, uint256 lpShares);
     event LiquidityRemoved(bytes32 indexed marketId, address indexed provider, uint256 yesAmount, uint256 noAmount, uint256 lpShares);
     event MarketSettled(bytes32 indexed marketId, uint8 winningSide);
+    event TradingFeeUpdated(uint256 newFee);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -119,7 +137,10 @@ contract PredictionAMM is
             totalFees: 0,
             active: true,
             settled: false,
-            winningSide: 0
+            winningSide: 0,
+            winnerPayoutPool: 0,
+            winningSharesRemaining: 0,
+            lpCollateralPool: 0
         });
 
         // NOTE: Liquidity is already transferred by the Factory before calling this function
@@ -314,22 +335,20 @@ contract PredictionAMM is
         Market storage market = markets[marketId];
         require(shares > 0, "AMM: zero shares");
         require(lpShares[marketId][msg.sender] >= shares, "AMM: insufficient shares");
+        require(market.settled, "AMM: settle first");
 
         uint256 totalShares = totalLpShares[marketId];
-        yesAmount = (shares * market.yesPool) / totalShares;
-        noAmount = (shares * market.noPool) / totalShares;
-
-        // Update pools
-        market.yesPool -= yesAmount;
-        market.noPool -= noAmount;
-        market.k = market.yesPool * market.noPool;
+        uint256 amountOut = (shares * market.lpCollateralPool) / totalShares;
+        yesAmount = amountOut / 2;
+        noAmount = amountOut - yesAmount;
 
         // Update LP shares
         lpShares[marketId][msg.sender] -= shares;
         totalLpShares[marketId] -= shares;
+        market.lpCollateralPool -= amountOut;
 
         // Transfer USDC to user
-        require(usdc.transfer(msg.sender, yesAmount + noAmount), "AMM: transfer failed");
+        require(usdc.transfer(msg.sender, amountOut), "AMM: transfer failed");
 
         emit LiquidityRemoved(marketId, msg.sender, yesAmount, noAmount, shares);
     }
@@ -342,10 +361,40 @@ contract PredictionAMM is
         require(market.active, "AMM: market not active");
         require(!market.settled, "AMM: already settled");
         require(winningSide == 0 || winningSide == 1, "AMM: invalid side");
+        require(address(marketFactory) != address(0), "AMM: factory not set");
+
+        (
+            ,
+            ,
+            ,
+            uint256 closeTimestamp,
+            uint256 resolutionTimestamp,
+            ,
+            bool factoryActive
+        ) = marketFactory.getMarket(marketId);
+        require(closeTimestamp > 0, "AMM: unknown market");
+        require(!factoryActive, "AMM: market still active");
+        require(block.timestamp >= closeTimestamp, "AMM: market still open");
+        require(block.timestamp >= resolutionTimestamp, "AMM: too early to settle");
 
         market.settled = true;
         market.winningSide = winningSide;
         market.active = false;
+
+        uint256 collateral = market.yesPool + market.noPool;
+        uint256 winningTokenId = uint256(keccak256(abi.encodePacked(marketId, winningSide)));
+        uint256 winningShares = positions.totalSupply(winningTokenId);
+
+        if (winningShares == 0) {
+            market.winnerPayoutPool = 0;
+            market.winningSharesRemaining = 0;
+            market.lpCollateralPool = collateral;
+        } else {
+            uint256 payoutPool = collateral < winningShares ? collateral : winningShares;
+            market.winnerPayoutPool = payoutPool;
+            market.winningSharesRemaining = winningShares;
+            market.lpCollateralPool = collateral - payoutPool;
+        }
 
         emit MarketSettled(marketId, winningSide);
     }
@@ -364,13 +413,19 @@ contract PredictionAMM is
         require(market.settled, "AMM: not settled");
         require(side == market.winningSide, "AMM: losing side");
         require(shares > 0, "AMM: zero shares");
+        require(market.winningSharesRemaining >= shares, "AMM: exceeds claimable");
+        require(market.winnerPayoutPool > 0, "AMM: no winner reserve");
 
-        // Calculate payout: 1 share = 1 USDC
-        payout = shares;
+        // Distribute reserved winner pool pro-rata over remaining winning shares.
+        payout = (shares * market.winnerPayoutPool) / market.winningSharesRemaining;
+        require(payout > 0, "AMM: payout too small");
 
         // Burn position tokens
         uint256 tokenId = uint256(keccak256(abi.encodePacked(marketId, side)));
         positions.burn(msg.sender, tokenId, shares);
+
+        market.winningSharesRemaining -= shares;
+        market.winnerPayoutPool -= payout;
 
         // Transfer USDC
         require(usdc.transfer(msg.sender, payout), "AMM: transfer failed");
@@ -412,6 +467,21 @@ contract PredictionAMM is
     function setPositions(address _positions) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_positions != address(0), "AMM: zero address");
         positions = IMarketPositions(_positions);
+    }
+
+    /// @notice Set market factory contract used for settlement-time checks
+    /// @param _marketFactory New market factory address
+    function setMarketFactory(address _marketFactory) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_marketFactory != address(0), "AMM: zero address");
+        marketFactory = IMarketFactoryV2(_marketFactory);
+    }
+
+    /// @notice Update trading fee in basis points
+    /// @param newFee New fee (max 1000 = 10%)
+    function setTradingFee(uint256 newFee) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newFee <= 1000, "AMM: fee too high");
+        tradingFee = newFee;
+        emit TradingFeeUpdated(newFee);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}

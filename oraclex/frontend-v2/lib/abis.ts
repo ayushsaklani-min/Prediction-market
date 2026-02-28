@@ -54,6 +54,13 @@ export const PREDICTION_AMM_ABI = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'tradingFee',
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       { name: 'role', type: 'bytes32' },
       { name: 'account', type: 'address' },
@@ -431,8 +438,9 @@ export const ORACLE_ADAPTER_ABI = [
     name: 'getOutcome',
     outputs: [
       { name: 'result', type: 'uint8' },
-      { name: 'proposedAt', type: 'uint256' },
-      { name: 'finalized', type: 'bool' },
+      { name: 'oracle', type: 'address' },
+      { name: 'timestamp', type: 'uint256' },
+      { name: 'status', type: 'uint8' },
     ],
     stateMutability: 'view',
     type: 'function',

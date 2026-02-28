@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IVeORX {
     function balanceOf(address account) external view returns (uint256);
     function totalSupply() external view returns (uint256);
+    function getPastVotes(address account, uint256 timepoint) external view returns (uint256);
 }
 
 /// @title Fee Distributor
@@ -35,6 +36,7 @@ contract FeeDistributor is
         uint256 endTime;
         uint256 totalRewards;
         uint256 totalVeORXSupply;
+        uint256 snapshotBlock;
         mapping(address => bool) claimed;
     }
 
@@ -94,6 +96,7 @@ contract FeeDistributor is
 
         // Snapshot veORX total supply
         epoch.totalVeORXSupply = veOrx.totalSupply();
+        epoch.snapshotBlock = block.number > 0 ? block.number - 1 : 0;
 
         emit EpochFinalized(currentEpoch, epoch.totalRewards, epoch.totalVeORXSupply);
 
@@ -113,7 +116,7 @@ contract FeeDistributor is
         require(epoch.totalVeORXSupply > 0, "FeeDistributor: no veORX supply");
 
         // Calculate user's share based on veORX balance at epoch end
-        uint256 userVeORX = veOrx.balanceOf(msg.sender);
+        uint256 userVeORX = _getUserVeORXForEpoch(msg.sender, epoch);
         require(userVeORX > 0, "FeeDistributor: no veORX balance");
 
         uint256 userReward = (epoch.totalRewards * userVeORX) / epoch.totalVeORXSupply;
@@ -144,7 +147,7 @@ contract FeeDistributor is
                 continue;
             }
 
-            uint256 userVeORX = veOrx.balanceOf(msg.sender);
+            uint256 userVeORX = _getUserVeORXForEpoch(msg.sender, epoch);
             if (userVeORX == 0) {
                 continue;
             }
@@ -183,7 +186,7 @@ contract FeeDistributor is
             return 0;
         }
 
-        uint256 userVeORX = veOrx.balanceOf(user);
+        uint256 userVeORX = _getUserVeORXForEpoch(user, epoch);
         if (userVeORX == 0) {
             return 0;
         }
@@ -202,7 +205,7 @@ contract FeeDistributor is
                 continue;
             }
 
-            uint256 userVeORX = veOrx.balanceOf(user);
+            uint256 userVeORX = _getUserVeORXForEpoch(user, epoch);
             if (userVeORX == 0) {
                 continue;
             }
@@ -219,6 +222,13 @@ contract FeeDistributor is
     /// @param epochId Epoch ID
     function hasClaimed(address user, uint256 epochId) external view returns (bool) {
         return epochs[epochId].claimed[user];
+    }
+
+    function _getUserVeORXForEpoch(address user, Epoch storage epoch) internal view returns (uint256) {
+        if (epoch.snapshotBlock == 0) {
+            return veOrx.balanceOf(user);
+        }
+        return veOrx.getPastVotes(user, epoch.snapshotBlock);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}

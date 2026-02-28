@@ -7,9 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Proposal } from '@/types';
 import { formatORX, formatAddress, formatTimestamp } from '@/lib/utils';
 import { useVoting } from '@/hooks/useVoting';
-import { ThumbsUp, ThumbsDown, Minus, ExternalLink } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
 import { useState } from 'react';
-import { formatUnits } from 'viem';
 
 interface ProposalCardProps {
   proposal: Proposal;

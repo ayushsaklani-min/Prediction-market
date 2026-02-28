@@ -12,7 +12,12 @@ export default function TestPage() {
       try {
         console.log('Testing fetch to:', process.env.NEXT_PUBLIC_SUBGRAPH_URL);
         
-        const response = await fetch('http://localhost:4000', {
+        const endpoint = process.env.NEXT_PUBLIC_SUBGRAPH_URL || '';
+        if (!endpoint) {
+          throw new Error('NEXT_PUBLIC_SUBGRAPH_URL is not configured');
+        }
+
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -49,7 +54,7 @@ export default function TestPage() {
       <h1 className="text-2xl font-bold mb-4">GraphQL Connection Test</h1>
       
       <div className="mb-4">
-        <p><strong>Subgraph URL:</strong> {process.env.NEXT_PUBLIC_SUBGRAPH_URL || 'http://localhost:4000'}</p>
+        <p><strong>Subgraph URL:</strong> {process.env.NEXT_PUBLIC_SUBGRAPH_URL || '(not configured)'}</p>
       </div>
 
       {loading && <p>Loading...</p>}

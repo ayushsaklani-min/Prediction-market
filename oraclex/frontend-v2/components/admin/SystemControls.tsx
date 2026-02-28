@@ -1,22 +1,50 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { AlertCircle, Pause, Play, Settings, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export function SystemControls() {
-  const handlePause = () => {
-    toast.success('Contract paused (demo)');
+  const { pauseAMM, unpauseAMM, updateTradingFee } = useAdmin();
+  const [tradingFeeBps, setTradingFeeBps] = useState('30');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePause = async () => {
+    try {
+      setIsSubmitting(true);
+      await pauseAMM();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleUnpause = () => {
-    toast.success('Contract unpaused (demo)');
+  const handleUnpause = async () => {
+    try {
+      setIsSubmitting(true);
+      await unpauseAMM();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleUpdateFees = () => {
-    toast.success('Fee parameters updated (demo)');
+  const handleUpdateFees = async () => {
+    const parsed = Number(tradingFeeBps);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1000) {
+      toast.error('Trading fee must be between 0 and 1000 bps');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await updateTradingFee(parsed);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -84,17 +112,27 @@ export function SystemControls() {
         <div className="space-y-3">
           <h4 className="font-semibold">Parameter Updates</h4>
           <div className="space-y-2">
-            <Button variant="outline" className="w-full justify-start" onClick={handleUpdateFees}>
+            <div className="flex gap-2">
+              <Input
+                value={tradingFeeBps}
+                onChange={(e) => setTradingFeeBps(e.target.value)}
+                type="number"
+                min={0}
+                max={1000}
+                placeholder="30"
+              />
+              <Button variant="outline" onClick={handleUpdateFees} disabled={isSubmitting}>
+                <Settings className="mr-2 h-4 w-4" />
+                Update Fee
+              </Button>
+            </div>
+            <Button variant="outline" className="w-full justify-start" disabled>
               <Settings className="mr-2 h-4 w-4" />
-              Update Fee Parameters
+              Update Market Limits (Coming Soon)
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" disabled>
               <Settings className="mr-2 h-4 w-4" />
-              Update Market Limits
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              <Settings className="mr-2 h-4 w-4" />
-              Update Oracle Address
+              Update Oracle Address (Coming Soon)
             </Button>
           </div>
         </div>

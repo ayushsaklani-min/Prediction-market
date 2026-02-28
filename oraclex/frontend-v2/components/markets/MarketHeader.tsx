@@ -15,7 +15,6 @@ import {
   TrendingUp,
   ExternalLink,
   Share2,
-  Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CHAIN_CONFIG } from '@/config/contracts';

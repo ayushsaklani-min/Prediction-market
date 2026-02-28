@@ -36,6 +36,6 @@ jobs:
           node-version: 20
       - name: Build
         run: |
-          cd oraclex/frontend
+          cd oraclex/frontend-v2
           npm ci || npm i
           npm run build

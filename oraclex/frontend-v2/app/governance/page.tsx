@@ -16,7 +16,7 @@ import { useAccount, useWriteContract, usePublicClient } from 'wagmi';
 import { formatORX } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Vote, Lock, TrendingUp, Users, Plus } from 'lucide-react';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, isConfiguredAddress } from '@/config/contracts';
 import { GOVERNANCE_ABI } from '@/lib/abis';
 import { toast } from 'sonner';
 
@@ -35,11 +35,15 @@ export default function GovernancePage() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Check if Governance contract is deployed
-  const isGovernanceDeployed = CONTRACTS.Governance && CONTRACTS.Governance !== '0x...' && CONTRACTS.Governance.length === 42;
+  const isGovernanceDeployed = isConfiguredAddress(CONTRACTS.Governance);
 
   const handleCreateProposal = async () => {
     if (!address || !proposalTitle || !proposalDescription) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    if (!isGovernanceDeployed) {
+      toast.error('Governance contract not configured');
       return;
     }
 

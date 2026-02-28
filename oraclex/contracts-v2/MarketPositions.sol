@@ -26,6 +26,7 @@ contract MarketPositions is
 
     // marketId => metadata URI
     mapping(uint256 => string) private _tokenURIs;
+    mapping(uint256 => uint256) private _totalSupply;
 
     event PositionMinted(address indexed user, uint256 indexed tokenId, uint256 amount);
     event PositionBurned(address indexed user, uint256 indexed tokenId, uint256 amount);
@@ -56,6 +57,7 @@ contract MarketPositions is
     /// @param amount Amount to mint
     function mint(address to, uint256 tokenId, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, tokenId, amount, "");
+        _totalSupply[tokenId] += amount;
         emit PositionMinted(to, tokenId, amount);
     }
 
@@ -65,7 +67,14 @@ contract MarketPositions is
     /// @param amount Amount to burn
     function burn(address from, uint256 tokenId, uint256 amount) external onlyRole(MINTER_ROLE) {
         _burn(from, tokenId, amount);
+        _totalSupply[tokenId] -= amount;
         emit PositionBurned(from, tokenId, amount);
+    }
+
+    /// @notice Get total supply for a position token
+    /// @param tokenId Token ID
+    function totalSupply(uint256 tokenId) external view returns (uint256) {
+        return _totalSupply[tokenId];
     }
 
     /// @notice Set metadata URI for a token

@@ -38,7 +38,7 @@ export default function PortfolioPage() {
 
   // Estimate portfolio value (assuming 0.5 USDC per share for active markets)
   const totalValue = activePositions.reduce((sum, p) => {
-    return sum + Number(formatUnits(p.shares, 18)) * 0.5;
+    return sum + Number(formatUnits(p.shares, 6)) * 0.5;
   }, 0);
 
   return (
@@ -109,7 +109,7 @@ export default function PortfolioPage() {
           ) : (
             <div className="space-y-4">
               {positions.map((position, index) => {
-                const sharesFormatted = formatUnits(position.shares, 18);
+                const sharesFormatted = formatUnits(position.shares, 6);
                 const estimatedValue = Number(sharesFormatted) * 0.5;
                 
                 return (

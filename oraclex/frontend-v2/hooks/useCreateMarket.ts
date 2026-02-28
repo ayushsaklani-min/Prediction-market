@@ -5,6 +5,7 @@ import { useWriteContract, usePublicClient, useAccount } from 'wagmi';
 import { parseUnits } from 'viem';
 import { CONTRACTS, CHAIN_CONFIG } from '@/config/contracts';
 import { MARKET_FACTORY_ABI, USDC_ABI } from '@/lib/abis';
+import { getTargetNetworkName } from '@/lib/network';
 import { toast } from 'sonner';
 
 interface CreateMarketParams {
@@ -29,7 +30,7 @@ export function useCreateMarket() {
     try {
       // Check if wallet is on correct network
       if (chain?.id !== CHAIN_CONFIG.chainId) {
-        toast.error(`Please switch to Polygon Mainnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
+        toast.error(`Please switch to ${getTargetNetworkName(CHAIN_CONFIG.chainId)} (Chain ID: ${CHAIN_CONFIG.chainId})`);
         throw new Error('Wrong network');
       }
 

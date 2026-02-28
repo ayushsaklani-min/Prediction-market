@@ -7,7 +7,11 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
+
+defaults:
+  run:
+    working-directory: oraclex
 
 jobs:
   lint:
@@ -32,7 +36,7 @@ jobs:
         run: npx solhint 'contracts-v2/**/*.sol'
       
       - name: Check formatting
-        run: npm run format -- --check
+        run: npm run format:check
 
   compile:
     name: Compile Contracts
@@ -50,7 +54,7 @@ jobs:
         run: npm ci
       
       - name: Compile contracts
-        run: npm run compile
+        run: npm run compile:v2
       
       - name: Check contract sizes
         run: npm run size
@@ -99,11 +103,7 @@ jobs:
       
       - name: Check coverage threshold
         run: |
-          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
-          if (( $(echo "$COVERAGE < 95" | bc -l) )); then
-            echo "Coverage is below 95%: $COVERAGE%"
-            exit 1
-          fi
+          node -e "const fs=require('fs'); const p='coverage/coverage-summary.json'; if(!fs.existsSync(p)){console.error('Missing coverage summary'); process.exit(1);} const c=JSON.parse(fs.readFileSync(p,'utf8')).total.lines.pct; if(c<95){console.error('Coverage is below 95%: '+c+'%'); process.exit(1);} console.log('Coverage OK: '+c+'%');"
 
   gas-report:
     name: Gas Report

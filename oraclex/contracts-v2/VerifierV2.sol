@@ -6,8 +6,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title Verifier V2
-/// @notice Verifies AI commitments and zkML proofs
-/// @dev Supports multiple verification methods and proof types
+    /// @notice Verifies AI commitments and cryptographic proofs
+    /// @dev Supports hash/signature verification. Advanced proof types fail closed until implemented.
 contract VerifierV2 is
     Initializable,
     AccessControlUpgradeable,
@@ -20,8 +20,8 @@ contract VerifierV2 is
         None,
         Hash,          // Simple hash commitment
         Signature,     // Signed data
-        ZKProof,       // Zero-knowledge proof
-        ChainlinkDON   // Chainlink DON attestation
+        ZKProof,       // Reserved: not yet implemented (fails closed)
+        ChainlinkDON   // Reserved: not yet implemented (fails closed)
     }
 
     struct AICommitment {
@@ -147,11 +147,10 @@ contract VerifierV2 is
             // Verify signature
             return _verifySignature(marketId, outcome, proof, commitment.submitter);
         } else if (commitment.proofType == ProofType.ZKProof) {
-            // Verify zero-knowledge proof
-            // TODO: Implement zkML verification
-            return true; // Placeholder
+            // Fail closed until zk proof verifier integration is implemented.
+            return false;
         } else if (commitment.proofType == ProofType.ChainlinkDON) {
-            // Verify Chainlink DON attestation
+            // Fail closed until Chainlink DON attestation verification is implemented.
             return _verifyChainlinkAttestation(marketId, outcome, proof);
         }
 
@@ -211,9 +210,10 @@ contract VerifierV2 is
         uint8 outcome,
         bytes memory attestation
     ) internal pure returns (bool valid) {
-        // TODO: Implement Chainlink Functions verification
-        // This would verify the DON signature and request ID
-        return true; // Placeholder
+        marketId;
+        outcome;
+        attestation;
+        return false;
     }
 
     /// @notice Get commitment for a market
@@ -235,6 +235,15 @@ contract VerifierV2 is
             commitment.ipfsCid,
             commitment.verified
         );
+    }
+
+    /// @notice Get proof type metadata for a market commitment
+    /// @param marketId Market identifier
+    /// @return proofType Proof type enum value
+    /// @return exists Whether a commitment exists for the market
+    function getProofType(bytes32 marketId) external view returns (uint8 proofType, bool exists) {
+        AICommitment storage commitment = commitments[marketId];
+        return (uint8(commitment.proofType), commitment.commitmentHash != bytes32(0));
     }
 
     /// @notice Get model metadata for a market

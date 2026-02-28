@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   TrendingUp, 
   Wallet, 
@@ -16,6 +15,13 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { CHAIN_CONFIG } from '@/config/contracts';
+import { getTargetNetworkName } from '@/lib/network';
+
+const ConnectButton = dynamic(
+  () => import('@rainbow-me/rainbowkit').then((mod) => mod.ConnectButton),
+  { ssr: false }
+);
 
 const navigation = [
   { name: 'Markets', href: '/', icon: TrendingUp },
@@ -28,16 +34,17 @@ const navigation = [
 export function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const networkName = getTargetNetworkName(CHAIN_CONFIG.chainId);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-white/95 shadow-sm backdrop-blur">
       <nav className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <TrendingUp className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold">OracleX</span>
+          <span className="text-xl font-extrabold tracking-tight">OracleX</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -51,8 +58,8 @@ export function Header() {
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
                   className={cn(
-                    'gap-2',
-                    isActive && 'bg-secondary'
+                    'gap-2 rounded-xl',
+                    isActive && 'bg-secondary text-foreground'
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -65,7 +72,9 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center space-x-2">
-          <ThemeToggle />
+          <span className="hidden rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground sm:inline-flex">
+            {networkName}
+          </span>
           <div className="hidden md:block">
             <ConnectButton />
           </div>

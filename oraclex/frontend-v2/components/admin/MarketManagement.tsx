@@ -28,7 +28,6 @@ import {
 export function MarketManagement() {
   const { data: markets } = useMarkets();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMarket, setSelectedMarket] = useState<string | null>(null);
 
   const filteredMarkets = markets?.filter((market) => {
     if (!searchQuery) return true;
@@ -117,7 +116,6 @@ export function MarketManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedMarket(market.marketId)}
                           >
                             <Settings className="h-4 w-4" />
                           </Button>

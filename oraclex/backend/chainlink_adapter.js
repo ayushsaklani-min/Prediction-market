@@ -6,7 +6,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const root = process.cwd();
-const deployed = JSON.parse(fs.readFileSync(path.join(root, 'deployed.json'), 'utf8'));
+const deployedPathV2 = path.join(root, 'deployed-v2.json');
+const deployedPathLegacy = path.join(root, 'deployed.json');
+const deployed = JSON.parse(
+  fs.readFileSync(fs.existsSync(deployedPathV2) ? deployedPathV2 : deployedPathLegacy, 'utf8')
+);
 
 function findArtifactPath(name) {
   const hhRoot = path.join(root, 'artifacts', 'contracts');
@@ -32,13 +36,20 @@ function loadArtifact(name) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
-// Chainlink Functions integration
-// This function should be called by Chainlink Functions DON to settle markets
-export async function settleMarket(marketId, winningSide) {
+// Oracle attestation integration
+// Caller must provide cryptographic proof bytes compatible with VerifierV2.
+export async function settleMarket(marketId, winningSide, proof) {
+  if (!proof || proof === '0x') {
+    throw new Error('Proof is required for settlement proposals.');
+  }
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-  const art = loadArtifact('OracleXOracleAdapter');
-  const adapter = new ethers.Contract(deployed.OracleXOracleAdapter, art.abi, wallet);
-  const tx = await adapter.pushOutcome(marketId, winningSide);
+  const art = loadArtifact('OracleAdapterV2');
+  const contracts = deployed.contracts || deployed;
+  if (!contracts.OracleAdapterV2) {
+    throw new Error('OracleAdapterV2 address not found in deployment file');
+  }
+  const adapter = new ethers.Contract(contracts.OracleAdapterV2, art.abi, wallet);
+  const tx = await adapter.proposeOutcome(marketId, winningSide, proof);
   return await tx.wait();
 }

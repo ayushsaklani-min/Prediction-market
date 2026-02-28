@@ -10,9 +10,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
-/// @title OracleX Simple Governance
-/// @notice DAO governance using veORX voting power (without timelock for simplicity)
-/// @dev Implements OpenZeppelin Governor without timelock
+/// @title OracleX Simple Governance (Legacy)
+/// @notice Minimal DAO governance using veORX voting power
+/// @dev For production, pair governance execution with OracleXTimelock + multisig admin controls.
 contract SimpleGovernance is
     Initializable,
     GovernorUpgradeable,

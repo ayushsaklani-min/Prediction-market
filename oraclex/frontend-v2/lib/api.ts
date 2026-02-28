@@ -1,4 +1,4 @@
-const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL || 'http://localhost:4000';
+const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL || '';
 
 export interface GraphQLResponse<T> {
   data: T;
@@ -6,6 +6,10 @@ export interface GraphQLResponse<T> {
 }
 
 export async function querySubgraph<T>(query: string, variables?: Record<string, any>): Promise<T> {
+  if (!SUBGRAPH_URL) {
+    throw new Error('NEXT_PUBLIC_SUBGRAPH_URL is not configured.');
+  }
+
   const response = await fetch(SUBGRAPH_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

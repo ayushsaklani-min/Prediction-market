@@ -127,6 +127,8 @@ contract veORX is
 
         uint256 amount = lock.amount;
         totalLockedSupply -= amount;
+        _writeCheckpoint(_balanceCheckpoints[msg.sender], _subtract, amount);
+        _writeCheckpoint(_totalSupplyCheckpoints, _subtract, amount);
         
         delete locked[msg.sender];
 

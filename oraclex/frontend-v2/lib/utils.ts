@@ -21,7 +21,7 @@ export function formatORX(amount: bigint): string {
 }
 
 export function formatShares(shares: bigint): string {
-  return Number(formatUnits(shares, 18)).toLocaleString('en-US', {
+  return Number(formatUnits(shares, 6)).toLocaleString('en-US', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
@@ -107,7 +107,7 @@ export function calculatePnL(
   avgEntryPrice: number,
   currentPrice: number
 ): bigint {
-  const sharesNum = Number(formatUnits(shares, 18));
+  const sharesNum = Number(formatUnits(shares, 6));
   const pnl = sharesNum * (currentPrice - avgEntryPrice);
   return parseUnits(pnl.toFixed(6), 6);
 }

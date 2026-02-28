@@ -2,32 +2,45 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useReadContract, useAccount, usePublicClient } from 'wagmi';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, isConfiguredAddress } from '@/config/contracts';
 import { GOVERNANCE_ABI } from '@/lib/abis';
 import { Proposal } from '@/types';
 
 export function useGovernance() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
+  const governanceConfigured = isConfiguredAddress(CONTRACTS.Governance);
 
   // Fetch all proposals from blockchain by reading ProposalCreated events
   const { data: proposals, isLoading } = useQuery({
     queryKey: ['proposals', CONTRACTS.Governance],
     queryFn: async (): Promise<Proposal[]> => {
-      if (!publicClient || !CONTRACTS.Governance) return [];
+      if (!publicClient || !governanceConfigured) return [];
 
       try {
         console.log('Fetching proposals from:', CONTRACTS.Governance);
-        
-        // Get ProposalCreated events from the Governance contract
-        // Use getContractEvents for better compatibility
-        const logs = await publicClient.getContractEvents({
-          address: CONTRACTS.Governance as `0x${string}`,
-          abi: GOVERNANCE_ABI,
-          eventName: 'ProposalCreated',
-          fromBlock: BigInt(30288000), // Start from recent block to avoid timeout
-          toBlock: 'latest',
-        });
+
+        // dRPC free tier rejects eth_getLogs requests over 10k blocks.
+        const latestBlock = await publicClient.getBlockNumber();
+        const configuredStart = process.env.NEXT_PUBLIC_GOVERNANCE_START_BLOCK
+          ? BigInt(process.env.NEXT_PUBLIC_GOVERNANCE_START_BLOCK)
+          : (latestBlock > 50000n ? latestBlock - 50000n : 0n);
+
+        const chunkSize = 9500n;
+        const logs: any[] = [];
+        let cursor = configuredStart;
+        while (cursor <= latestBlock) {
+          const end = cursor + chunkSize > latestBlock ? latestBlock : cursor + chunkSize;
+          const chunk = await publicClient.getContractEvents({
+            address: CONTRACTS.Governance as `0x${string}`,
+            abi: GOVERNANCE_ABI,
+            eventName: 'ProposalCreated',
+            fromBlock: cursor,
+            toBlock: end,
+          });
+          logs.push(...chunk);
+          cursor = end + 1n;
+        }
 
         console.log('Found', logs.length, 'proposal events');
 
@@ -106,7 +119,7 @@ export function useGovernance() {
         return [];
       }
     },
-    enabled: !!publicClient && !!CONTRACTS.Governance,
+    enabled: !!publicClient && governanceConfigured,
     refetchInterval: 30000,
   });
 
@@ -117,6 +130,9 @@ export function useGovernance() {
       abi: GOVERNANCE_ABI,
       functionName: 'state',
       args: [proposalId],
+      query: {
+        enabled: governanceConfigured,
+      },
     });
   };
 

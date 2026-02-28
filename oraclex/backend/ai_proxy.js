@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Deterministic AI proxy (JavaScript version)
 // Input (stdin JSON): { "eventId": str, "description": str, "timestamp": int, "chainId": int }
-// Output: { probability:int(10..89), explanation:str, aiHash:str }
+// Output includes verifier-compatible proof and commitment hash.
 
-import { keccak256 } from 'ethers';
+import { hexlify, keccak256, solidityPackedKeccak256, toUtf8Bytes } from 'ethers';
 import { createHash } from 'crypto';
 
 function keccak256Hash(data) {
@@ -55,14 +55,31 @@ function main() {
         explanation = explanation.substring(0, 280);
       }
 
-      // commitment: keccak256(probability || explanation || salt)
-      const salt = 'oraclex';
-      const aiHash = keccak256Hash(String(prob) + explanation + salt);
+      const outcome = prob >= 50 ? 1 : 0;
+      const proofObject = {
+        eventId,
+        probability: prob,
+        outcome,
+        explanation,
+        chainId,
+        timestamp: ts,
+      };
+      const proofJson = JSON.stringify(proofObject);
+      const proof = hexlify(toUtf8Bytes(proofJson));
+      const proofHash = keccak256(proof);
+
+      // VerifierV2(Hash): keccak256(abi.encodePacked(outcome, proof))
+      const aiHash = solidityPackedKeccak256(['uint8', 'bytes'], [outcome, proof]);
+      const ipfsCid = `sha256:${createHash('sha256').update(proofJson).digest('hex')}`;
 
       const result = {
         probability: prob,
         explanation: explanation,
-        aiHash: aiHash
+        outcome,
+        proof,
+        proofHash,
+        aiHash,
+        ipfsCid,
       };
 
       console.log(JSON.stringify(result));

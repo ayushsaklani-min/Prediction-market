@@ -4,9 +4,9 @@ schema:
 dataSources:
   - kind: ethereum
     name: MarketFactoryV2
-    network: mumbai
+    network: matic
     source:
-      address: "0x82032757239F37E6c42D5098c115EcD67Ce587A7"
+      address: "0xfCD154BD714f4b9DDd271B8bdD1fF3d427333dEf"
       abi: MarketFactoryV2
       startBlock: 0
     mapping:
@@ -27,9 +27,9 @@ dataSources:
       file: ./src/market-factory.ts
   - kind: ethereum
     name: PredictionAMM
-    network: mumbai
+    network: matic
     source:
-      address: "0x6A3b46fb08eb31e2811d447EEd0550b5d66c3487"
+      address: "0xAD8dC6ca24038Af23E2f2Ea7A07B588cF04F4213"
       abi: PredictionAMM
       startBlock: 0
     mapping:
@@ -55,9 +55,9 @@ dataSources:
       file: ./src/prediction-amm.ts
   - kind: ethereum
     name: OracleAdapterV2
-    network: mumbai
+    network: matic
     source:
-      address: "0xEF765a5524558A6aDB5ACECD936373c0182eE6Fc"
+      address: "0xd45284283A8D0BDD15728859B12E9EBBF2630c10"
       abi: OracleAdapterV2
       startBlock: 0
     mapping:

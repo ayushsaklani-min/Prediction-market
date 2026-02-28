@@ -11,7 +11,7 @@ import { Shield, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AdminPage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const { isAdmin } = useAdmin();
 
   if (!isConnected) {
@@ -97,7 +97,7 @@ export default function AdminPage() {
               <div className="text-center">
                 <h3 className="mb-2 font-semibold">Oracle Management</h3>
                 <p className="text-sm text-muted-foreground">
-                  View Chainlink Functions logs, AI predictions, and settlement data
+                  View oracle commitments, proof metadata, and settlement state
                 </p>
                 <div className="mt-6">
                   <p className="text-sm text-muted-foreground">

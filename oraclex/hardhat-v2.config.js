@@ -11,6 +11,7 @@ dotenv.config();
 const {
   PRIVATE_KEY,
   RPC_URL,
+  AMOY_RPC_URL,
   POLYGONSCAN_API_KEY,
   COINMARKETCAP_API_KEY
 } = process.env;
@@ -43,16 +44,7 @@ const config = {
         enabled: process.env.FORK === 'true'
       }
     },
-    
-    // Polygon Amoy Testnet
-    amoy: {
-      url: RPC_URL || 'https://rpc-amoy.polygon.technology',
-      chainId: 80002,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
-      gasPrice: 'auto',
-      gas: 'auto'
-    },
-    
+
     // Polygon Mainnet
     polygon: {
       url: RPC_URL || 'https://polygon-rpc.com',
@@ -61,31 +53,20 @@ const config = {
       gasPrice: 'auto',
       gas: 'auto'
     },
-    
-    // Mumbai (deprecated but kept for reference)
-    mumbai: {
-      url: 'https://rpc-mumbai.maticvigil.com',
-      chainId: 80001,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : []
+
+    amoy: {
+      url: AMOY_RPC_URL || RPC_URL || 'https://rpc-amoy.polygon.technology',
+      chainId: 80002,
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      gasPrice: 'auto',
+      gas: 'auto'
     }
   },
 
   etherscan: {
     apiKey: {
-      polygon: POLYGONSCAN_API_KEY || '',
-      polygonAmoy: POLYGONSCAN_API_KEY || '',
-      polygonMumbai: POLYGONSCAN_API_KEY || ''
-    },
-    customChains: [
-      {
-        network: 'polygonAmoy',
-        chainId: 80002,
-        urls: {
-          apiURL: 'https://api-amoy.polygonscan.com/api',
-          browserURL: 'https://amoy.polygonscan.com'
-        }
-      }
-    ]
+      polygon: POLYGONSCAN_API_KEY || ''
+    }
   },
 
   gasReporter: {

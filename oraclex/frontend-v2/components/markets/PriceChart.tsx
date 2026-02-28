@@ -13,19 +13,32 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
+import { querySubgraph, queries } from '@/lib/api';
 
 interface PriceChartProps {
   marketId: string;
 }
 
 export function PriceChart({ marketId }: PriceChartProps) {
-  // Fetch price history from subgraph (when indexed)
+  // Fetch price history from subgraph trades
   const { data: priceHistory = [] } = useQuery({
     queryKey: ['price-history', marketId],
     queryFn: async () => {
-      // TODO: Fetch from The Graph subgraph when indexed
-      // For now, return empty array - price history will show when trades are indexed
-      return [];
+      const data = await querySubgraph<any>(queries.GET_MARKET, { id: marketId.toLowerCase() });
+      const trades = [...(data?.market?.trades || [])]
+        .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+      let cumulativeVolume = 0;
+      return trades.map((trade: any) => {
+        const amount = Number(trade.amountIn || 0) / 1e6;
+        cumulativeVolume += amount;
+        return {
+          date: new Date(Number(trade.timestamp) * 1000).toLocaleTimeString(),
+          yesPrice: Number(trade.side) === 1 ? Number(trade.price) : 1 - Number(trade.price),
+          noPrice: Number(trade.side) === 1 ? 1 - Number(trade.price) : Number(trade.price),
+          volume: cumulativeVolume,
+        };
+      });
     },
   });
 

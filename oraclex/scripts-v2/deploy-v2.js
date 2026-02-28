@@ -14,15 +14,28 @@ async function main() {
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
   console.log("Network:", network.name, "Chain ID:", chainId, "\n");
+  const multisig = process.env.MULTISIG_ADDRESS || deployer.address;
+  const oracleSigner = process.env.ORACLE_SIGNER || multisig;
+  const timelockMinDelay = Number(process.env.TIMELOCK_MIN_DELAY || 24 * 60 * 60);
 
-  // USDC address (update for your network)
-  const USDC_ADDRESS = process.env.USDC_ADDRESS || "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582"; // Polygon Amoy
+  // Settlement token address (mainnet default, local auto-deploy fallback)
+  let USDC_ADDRESS = process.env.USDC_ADDRESS || "0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6";
+  if (chainId === 31337 && !process.env.USDC_ADDRESS) {
+    console.log("Deploying local TestUSDC for localhost demo...");
+    const TestUSDC = await ethers.getContractFactory("TestUSDC");
+    const testUsdc = await TestUSDC.deploy();
+    await testUsdc.waitForDeployment();
+    USDC_ADDRESS = await testUsdc.getAddress();
+    console.log("Local TestUSDC deployed to:", USDC_ADDRESS, "\n");
+  }
 
   const deployed = {
     network: chainId,
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
-    contracts: {}
+    contracts: {
+      USDC: USDC_ADDRESS
+    }
   };
 
   // 1. Deploy ORX Token
@@ -47,8 +60,20 @@ async function main() {
   deployed.contracts.veORX = await veOrx.getAddress();
   console.log("✅ veORX deployed to:", deployed.contracts.veORX, "\n");
 
-  // 3. Deploy Market Positions (ERC1155)
-  console.log("📝 Deploying Market Positions...");
+    // 3. Deploy Governance
+  console.log("Deploying Governance...");
+  const Governance = await ethers.getContractFactory("SimpleGovernance");
+  const governance = await upgrades.deployProxy(
+    Governance,
+    [deployed.contracts.veORX, deployer.address],
+    { initializer: "initialize", kind: "uups" }
+  );
+  await governance.waitForDeployment();
+  deployed.contracts.Governance = await governance.getAddress();
+  console.log("Governance deployed to:", deployed.contracts.Governance, "\\n");
+
+  // 4. Deploy Market Positions (ERC1155)
+  console.log("Deploying Market Positions...");
   const MarketPositions = await ethers.getContractFactory("MarketPositions");
   const positions = await upgrades.deployProxy(
     MarketPositions,
@@ -164,8 +189,8 @@ async function main() {
 
   // Grant ORACLE_ROLE to deployer (for testing)
   const ORACLE_ROLE = await oracleAdapter.ORACLE_ROLE();
-  await oracleAdapter.grantRole(ORACLE_ROLE, deployer.address);
-  console.log("✅ Granted ORACLE_ROLE to deployer");
+  await oracleAdapter.grantRole(ORACLE_ROLE, oracleSigner);
+  console.log("✅ Granted ORACLE_ROLE to oracle signer");
 
   // Grant VERIFIER_ROLE to Oracle Adapter
   const VERIFIER_ROLE = await verifier.VERIFIER_ROLE();
@@ -175,6 +200,67 @@ async function main() {
   // Update Treasury addresses
   await treasury.setFeeDistributor(deployed.contracts.FeeDistributor);
   console.log("✅ Updated Treasury fee distributor\n");
+
+  // 11. Optional governance timelock deployment (recommended for production)
+  console.log("📝 Deploying Governance Timelock...");
+  const OracleXTimelock = await ethers.getContractFactory("OracleXTimelock");
+  const timelock = await OracleXTimelock.deploy(
+    timelockMinDelay,
+    [deployed.contracts.Governance, multisig], // proposers (DAO + multisig)
+    [ethers.ZeroAddress], // executors (open execution after delay)
+    multisig
+  );
+  await timelock.waitForDeployment();
+  deployed.contracts.OracleXTimelock = await timelock.getAddress();
+  console.log("✅ Governance Timelock deployed to:", deployed.contracts.OracleXTimelock);
+  console.log("✅ Timelock admin/proposer set to:", multisig, "\n");
+  // 12. Move admin controls behind timelock/multisig
+  const DEFAULT_ADMIN_ROLE = ethers.ZeroHash;
+  const AMM_UPGRADER_ROLE = await amm.UPGRADER_ROLE();
+  const AMM_PAUSER_ROLE = await amm.PAUSER_ROLE();
+  const FACTORY_UPGRADER_ROLE = await factory.UPGRADER_ROLE();
+  const FACTORY_PAUSER_ROLE = await factory.PAUSER_ROLE();
+  const ORACLE_DISPUTE_ROLE = await oracleAdapter.DISPUTE_RESOLVER_ROLE();
+  const ORACLE_PAUSER_ROLE = await oracleAdapter.PAUSER_ROLE();
+  const ORACLE_UPGRADER_ROLE = await oracleAdapter.UPGRADER_ROLE();
+  const VERIFIER_UPGRADER_ROLE = await verifier.UPGRADER_ROLE();
+  const GOVERNANCE_UPGRADER_ROLE = await governance.UPGRADER_ROLE();
+  const POSITIONS_UPGRADER_ROLE = await positions.UPGRADER_ROLE();
+  const TREASURY_UPGRADER_ROLE = await treasury.UPGRADER_ROLE();
+  const FEEDIST_UPGRADER_ROLE = await feeDistributor.UPGRADER_ROLE();
+
+  await positions.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await amm.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await factory.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await oracleAdapter.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await verifier.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await governance.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await treasury.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+  await feeDistributor.grantRole(DEFAULT_ADMIN_ROLE, deployed.contracts.OracleXTimelock);
+
+  await amm.grantRole(AMM_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await amm.grantRole(AMM_PAUSER_ROLE, multisig);
+  await factory.grantRole(FACTORY_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await factory.grantRole(FACTORY_PAUSER_ROLE, multisig);
+  await oracleAdapter.grantRole(ORACLE_DISPUTE_ROLE, multisig);
+  await oracleAdapter.grantRole(ORACLE_PAUSER_ROLE, multisig);
+  await oracleAdapter.grantRole(ORACLE_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await verifier.grantRole(VERIFIER_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await governance.grantRole(GOVERNANCE_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await positions.grantRole(POSITIONS_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await treasury.grantRole(TREASURY_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+  await feeDistributor.grantRole(FEEDIST_UPGRADER_ROLE, deployed.contracts.OracleXTimelock);
+
+  await positions.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await amm.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await factory.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await oracleAdapter.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await verifier.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await governance.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await treasury.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  await feeDistributor.revokeRole(DEFAULT_ADMIN_ROLE, deployer.address);
+
+  console.log("Admin and upgrader roles moved behind timelock/multisig");
 
   // Save deployment info
   const deployedPath = path.join(process.cwd(), "deployed-v2.json");
@@ -193,10 +279,11 @@ async function main() {
   console.log("\n✅ All contracts deployed and configured successfully!");
   console.log("\n📝 Next steps:");
   console.log("1. Verify contracts on block explorer");
-  console.log("2. Set up Chainlink Functions subscription");
-  console.log("3. Configure frontend with new addresses");
-  console.log("4. Run integration tests");
-  console.log("5. Deploy subgraph for indexing");
+  console.log("2. Set up oracle attestation signer + proof policy");
+  console.log("3. Configure frontend with new addresses and subgraph URL");
+  console.log("4. Transfer admin roles to multisig/timelock");
+  console.log("5. Run integration + security tests");
+  console.log("6. Deploy subgraph for indexing");
 }
 
 main()
@@ -205,3 +292,7 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+
+
+

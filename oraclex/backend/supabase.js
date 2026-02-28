@@ -28,6 +28,11 @@ export async function createMarket(marketData) {
       chain_id: marketData.chainId,
       vault_address: marketData.vault || null,
       probability: marketData.probability || null,
+      outcome: marketData.outcome ?? null,
+      ai_hash: marketData.aiHash ?? null,
+      proof: marketData.proof ?? null,
+      proof_hash: marketData.proofHash ?? null,
+      proof_cid: marketData.proofCid ?? null,
     })
     .select()
     .single();
@@ -82,12 +87,16 @@ export async function updateMarket(marketId, updates) {
   }
   
   const updateData = { ...updates };
-  if (updates.deployed_at) {
-    updateData.deployed_at = updates.deployed_at;
-  }
-  if (updates.deploy_error !== undefined) {
-    updateData.deploy_error = updates.deploy_error;
-  }
+  if (updates.deployed_at) updateData.deployed_at = updates.deployed_at;
+  if (updates.deploy_error !== undefined) updateData.deploy_error = updates.deploy_error;
+  if (updates.probability !== undefined) updateData.probability = updates.probability;
+  if (updates.outcome !== undefined) updateData.outcome = updates.outcome;
+  if (updates.ai_hash !== undefined) updateData.ai_hash = updates.ai_hash;
+  if (updates.proof !== undefined) updateData.proof = updates.proof;
+  if (updates.proof_hash !== undefined) updateData.proof_hash = updates.proof_hash;
+  if (updates.proof_cid !== undefined) updateData.proof_cid = updates.proof_cid;
+  if (updates.market_id !== undefined) updateData.market_id = updates.market_id;
+  if (updates.vault_address !== undefined) updateData.vault_address = updates.vault_address;
   
   const { data, error } = await supabase
     .from('markets')

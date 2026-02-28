@@ -1,6 +1,6 @@
 # 🔮 OracleX - Decentralized Forecasting Protocol
 
-> **Status:** Live on Polygon Mainnet (Test Mode)
+> **Status:** Beta deployment on Polygon Mainnet
 > **Version:** v2.0.0 (Beta)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,7 +9,7 @@
 
 ## Protocol Overview
 
-OracleX is a decentralized prediction market protocol built on Polygon. It utilizes an Automated Market Maker (AMM) for instant liquidity and verifiable AI agents for market resolution. The protocol allows users to trade positions on future events with a focus on institutional-grade security and transparent settlement.
+OracleX is a decentralized prediction market protocol built on Polygon. It uses an Automated Market Maker (AMM) for instant liquidity and a proof-gated oracle resolution flow that is currently in beta. The protocol allows users to trade positions on future events with transparent settlement rules.
 
 ---
 
@@ -21,16 +21,16 @@ OracleX is a decentralized prediction market protocol built on Polygon. It utili
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| **Prediction AMM** | `0xB1B67563960fDD68BadeEb769Bf9b5A3D39aa81A` | [View ↗](https://polygonscan.com/address/0xB1B67563960fDD68BadeEb769Bf9b5A3D39aa81A) |
-| **Market Factory** | `0x34a4d275549F4B243427793d7dd07A3DC8b7358E` | [View ↗](https://polygonscan.com/address/0x34a4d275549F4B243427793d7dd07A3DC8b7358E) |
-| **Oracle Adapter** | `0x695Bb36D976629E6d46C8E1E1De24C1dCD4Fa517` | [View ↗](https://polygonscan.com/address/0x695Bb36D976629E6d46C8E1E1De24C1dCD4Fa517) |
-| **Notifier/Verifier** | `0x862eD35DBA824AfB27564d8ad3A3D7cF1302D0Ca` | [View ↗](https://polygonscan.com/address/0x862eD35DBA824AfB27564d8ad3A3D7cF1302D0Ca) |
+| **Prediction AMM** | `0xAD8dC6ca24038Af23E2f2Ea7A07B588cF04F4213` | [View ↗](https://polygonscan.com/address/0xAD8dC6ca24038Af23E2f2Ea7A07B588cF04F4213) |
+| **Market Factory** | `0xfCD154BD714f4b9DDd271B8bdD1fF3d427333dEf` | [View ↗](https://polygonscan.com/address/0xfCD154BD714f4b9DDd271B8bdD1fF3d427333dEf) |
+| **Oracle Adapter** | `0xd45284283A8D0BDD15728859B12E9EBBF2630c10` | [View ↗](https://polygonscan.com/address/0xd45284283A8D0BDD15728859B12E9EBBF2630c10) |
+| **Notifier/Verifier** | `0xd619b6C8c24fBcC1A764B4e11175DB7B8Caad2a7` | [View ↗](https://polygonscan.com/address/0xd619b6C8c24fBcC1A764B4e11175DB7B8Caad2a7) |
 | **ORX Token** | `0x1D2306f42DB68Ac09d1305b98C63ca3F997076bD` | [View ↗](https://polygonscan.com/address/0x1D2306f42DB68Ac09d1305b98C63ca3F997076bD) |
 | **veORX (Staking)** | `0x2C61bc6be0741256dde76a42Fc143D6709737656` | [View ↗](https://polygonscan.com/address/0x2C61bc6be0741256dde76a42Fc143D6709737656) |
-| **Treasury** | `0xEB0F09C0817F75Be039275f3E3C93CdAc3FF3fc5` | [View ↗](https://polygonscan.com/address/0xEB0F09C0817F75Be039275f3E3C93CdAc3FF3fc5) |
+| **Treasury** | `0x9F275918503c4fdABe4FE2BF6365EeE6D2De0664` | [View ↗](https://polygonscan.com/address/0x9F275918503c4fdABe4FE2BF6365EeE6D2De0664) |
 | **TestUSDC** | `0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6` | [View ↗](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6) |
 
-> **Note:** The current deployment uses **TestUSDC** for settlement to allow risk-free testing on the mainnet environment.
+> **Note:** The current deployment uses **TestUSDC** for settlement to allow risk-free testing on mainnet. This is not a production real-value market configuration.
 >
 > 🔹 **Get Free TestUSDC:** Mint tokens via the [PolygonScan Explorer](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6#writeContract) (Connect Web3 -> Write `mint` function).
 > 🔹 **Launch App:** [zkevm-eta.vercel.app](https://zkevm-eta.vercel.app)
@@ -104,7 +104,7 @@ To interact with the protocol on Polygon Mainnet:
 1.  **Configure Wallet:** Ensure MetaMask is connected to Polygon Mainnet (Chain ID 137).
 2.  **Acquire Assets:**
     *   **MATIC:** Required for gas fees.
-    *   **TestUSDC:** Mintable via the [Etherscan Write Contract](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6#writeContract) interface (function `mint`).
+    *   **TestUSDC:** Mintable via the [PolygonScan Write Contract](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6#writeContract) interface (function `mint`).
 3.  **Launch App:** Navigate to [zkevm-eta.vercel.app](https://zkevm-eta.vercel.app).
 
 ---
@@ -112,3 +112,6 @@ To interact with the protocol on Polygon Mainnet:
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+
+

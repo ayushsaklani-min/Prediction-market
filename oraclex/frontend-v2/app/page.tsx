@@ -47,18 +47,19 @@ export default function HomePage() {
   return (
     <div className="container py-8">
       {/* Hero Section */}
-      <div className="mb-12 text-center">
-        <h1 className="mb-4 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-          Trade on the Future with{' '}
-          <span className="text-gradient">Real AI</span>
-        </h1>
-        <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-          Decentralized prediction markets powered by AI on Polygon. Trade YES/NO on real-world events.
-        </p>
+      <div className="mb-12 rounded-3xl border border-border/80 bg-white/90 p-8 shadow-sm sm:p-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+            Analyze events and trade outcomes with confidence.
+          </h1>
+          <p className="mx-auto max-w-2xl text-base text-slate-600 sm:text-lg">
+            A clean, data-first interface for forecasting markets on Polygon. Track probabilities, discover liquidity, and execute fast.
+          </p>
+        </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="mb-8 space-y-4">
+      <div className="mb-8 space-y-4 rounded-2xl border border-border/70 bg-white/80 p-4 shadow-sm sm:p-6">
         <MarketSearch value={searchQuery} onChange={setSearchQuery} />
         <MarketFilters
           selectedCategory={selectedCategory}
@@ -70,7 +71,7 @@ export default function HomePage() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="space-y-6">
-        <TabsList>
+        <TabsList className="h-11 rounded-xl border border-border/70 bg-white p-1 shadow-sm">
           <TabsTrigger value="all" className="gap-2">
             <TrendingUp className="h-4 w-4" />
             All Markets

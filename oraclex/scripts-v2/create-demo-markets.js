@@ -13,7 +13,11 @@ async function main() {
   const deployed = JSON.parse(fs.readFileSync("deployed-v2.json", "utf8"));
   
   const factory = await ethers.getContractAt("MarketFactoryV2", deployed.contracts.MarketFactoryV2);
-  const usdc = await ethers.getContractAt("IERC20", process.env.USDC_ADDRESS || "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582");
+  const usdcAddress = process.env.USDC_ADDRESS || deployed.contracts.USDC;
+  if (!usdcAddress) {
+    throw new Error("USDC address not found. Set USDC_ADDRESS or deploy via deploy-v2 first.");
+  }
+  const usdc = await ethers.getContractAt("IERC20", usdcAddress);
 
   // Demo markets
   const demoMarkets = [
@@ -85,11 +89,6 @@ async function main() {
       let approveTx = await usdc.approve(deployed.contracts.MarketFactoryV2, totalCost);
       await approveTx.wait();
       
-      // Approve USDC to AMM for liquidity
-      console.log("  Approving USDC to AMM...");
-      approveTx = await usdc.approve(deployed.contracts.PredictionAMM, totalLiquidity);
-      await approveTx.wait();
-
       // Create market
       console.log("  Creating market...");
       const createTx = await factory.createMarket(

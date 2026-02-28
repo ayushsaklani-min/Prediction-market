@@ -4,6 +4,7 @@ import { useWriteContract, useWaitForTransactionReceipt, usePublicClient, useAcc
 import { parseUnits } from 'viem';
 import { CONTRACTS, CHAIN_CONFIG } from '@/config/contracts';
 import { PREDICTION_AMM_ABI, USDC_ABI } from '@/lib/abis';
+import { getTargetNetworkName } from '@/lib/network';
 import { toast } from 'sonner';
 
 export function useBuyShares() {
@@ -18,9 +19,10 @@ export function useBuyShares() {
     slippage: number = 0.01
   ) => {
     try {
+      if (!publicClient) throw new Error('Public client unavailable');
       // Check if wallet is on correct network
       if (chain?.id !== CHAIN_CONFIG.chainId) {
-        toast.error(`Please switch to Polygon Mainnet (Chain ID: ${CHAIN_CONFIG.chainId})`);
+        toast.error(`Please switch to ${getTargetNetworkName(CHAIN_CONFIG.chainId)} (Chain ID: ${CHAIN_CONFIG.chainId})`);
         throw new Error('Wrong network');
       }
 
@@ -45,9 +47,39 @@ export function useBuyShares() {
       await publicClient?.waitForTransactionReceipt({ hash: approveTx });
       toast.success('USDC approved!', { id: 'approve' });
 
-      // Set minShares to 0 to disable slippage protection
-      // TODO: Calculate expected shares using AMM formula (k = x * y)
-      const minShares = 0n;
+      // Calculate expected shares and apply slippage protection
+      const market = await publicClient?.readContract({
+        address: CONTRACTS.PredictionAMM,
+        abi: PREDICTION_AMM_ABI,
+        functionName: 'markets',
+        args: [marketId as `0x${string}`],
+      }) as any;
+
+      const tradingFee = await publicClient?.readContract({
+        address: CONTRACTS.PredictionAMM,
+        abi: PREDICTION_AMM_ABI,
+        functionName: 'tradingFee',
+      }) as bigint;
+
+      const fee = (amount * tradingFee) / 10000n;
+      const amountInAfterFee = amount - fee;
+      const yesPool = market[1] as bigint;
+      const noPool = market[2] as bigint;
+      const k = market[3] as bigint;
+
+      let expectedShares = 0n;
+      if (side === 1) {
+        const newNoPool = noPool + amountInAfterFee;
+        const newYesPool = k / newNoPool;
+        expectedShares = yesPool - newYesPool;
+      } else {
+        const newYesPool = yesPool + amountInAfterFee;
+        const newNoPool = k / newYesPool;
+        expectedShares = noPool - newNoPool;
+      }
+
+      const slippageBps = BigInt(Math.floor(slippage * 10000));
+      const minShares = (expectedShares * (10000n - slippageBps)) / 10000n;
 
       // Buy shares
       const buyTx = await writeContractAsync({
@@ -83,10 +115,41 @@ export function useSellShares() {
     slippage: number = 0.01
   ) => {
     try {
-      const shares = parseUnits(sharesAmount, 18);
+      if (!publicClient) throw new Error('Public client unavailable');
+      const shares = parseUnits(sharesAmount, 6);
 
-      // Calculate minimum USDC with slippage
-      const minAmount = shares * BigInt(Math.floor((1 - slippage) * 10000)) / 10000n;
+      const market = await publicClient?.readContract({
+        address: CONTRACTS.PredictionAMM,
+        abi: PREDICTION_AMM_ABI,
+        functionName: 'markets',
+        args: [marketId as `0x${string}`],
+      }) as any;
+
+      const tradingFee = await publicClient?.readContract({
+        address: CONTRACTS.PredictionAMM,
+        abi: PREDICTION_AMM_ABI,
+        functionName: 'tradingFee',
+      }) as bigint;
+
+      const yesPool = market[1] as bigint;
+      const noPool = market[2] as bigint;
+      const k = market[3] as bigint;
+
+      let expectedAmountOut = 0n;
+      if (side === 1) {
+        const newYesPool = yesPool + shares;
+        const newNoPool = k / newYesPool;
+        expectedAmountOut = noPool - newNoPool;
+      } else {
+        const newNoPool = noPool + shares;
+        const newYesPool = k / newNoPool;
+        expectedAmountOut = yesPool - newYesPool;
+      }
+
+      const fee = (expectedAmountOut * tradingFee) / 10000n;
+      const expectedAfterFee = expectedAmountOut - fee;
+      const slippageBps = BigInt(Math.floor(slippage * 10000));
+      const minAmount = (expectedAfterFee * (10000n - slippageBps)) / 10000n;
 
       // Sell shares
       const sellTx = await writeContractAsync({

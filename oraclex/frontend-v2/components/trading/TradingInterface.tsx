@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { useAccount, useBalance } from 'wagmi';
 import { CONTRACTS } from '@/config/contracts';
 import { parseUnits, formatUnits } from 'viem';
 import { calculateShares, calculatePrice, formatUSDC } from '@/lib/utils';
-import { ArrowDownUp, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TradingInterfaceProps {
@@ -34,7 +34,7 @@ export function TradingInterface({ marketId, market }: TradingInterfaceProps) {
   });
 
   const { buy } = useBuyShares();
-  const { sell } = useSellShares();
+  useSellShares();
 
   const amountBigInt = amount ? parseUnits(amount, 6) : 0n;
   const estimatedShares = calculateShares(
@@ -156,7 +156,7 @@ export function TradingInterface({ marketId, market }: TradingInterfaceProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">You receive</span>
               <span className="font-semibold">
-                {formatUnits(estimatedShares, 18)} shares
+                {formatUnits(estimatedShares, 6)} shares
               </span>
             </div>
             <div className="flex justify-between">

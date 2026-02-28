@@ -10,21 +10,21 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMarketDetail } from '@/hooks/useMarketDetail';
-import { useBuyShares, useSellShares, useRedeemWinnings } from '@/hooks/useTrading';
-import { TrendingUp, TrendingDown, Clock, Users, DollarSign, Activity } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useBuyShares, useSellShares } from '@/hooks/useTrading';
+import { Clock, Users, DollarSign, Activity } from 'lucide-react';
+import { PriceChart } from '@/components/markets/PriceChart';
+import { RecentTrades } from '@/components/markets/RecentTrades';
 
 export default function MarketDetailPage() {
   const params = useParams();
   const marketId = params.id as string;
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
   const [buyAmount, setBuyAmount] = useState('10');
   const [sellAmount, setSellAmount] = useState('10');
   const [selectedSide, setSelectedSide] = useState<0 | 1>(1);
 
   const { buy } = useBuyShares();
   const { sell } = useSellShares();
-  const { redeem } = useRedeemWinnings();
 
   const { data: market, isLoading } = useMarketDetail(marketId);
 
@@ -53,22 +53,15 @@ export default function MarketDetailPage() {
     );
   }
 
-  const categoryNames = ['Sports', 'Politics', 'Crypto', 'Entertainment', 'Science', 'Other'];
+  const categoryNames = ['Crypto', 'Sports', 'Politics', 'Entertainment', 'Science', 'Other'];
   const categoryName = categoryNames[market.category] || 'Other';
   
   const yesPrice = Number(market.yesPrice) || 0.5;
   const noPrice = Number(market.noPrice) || 0.5;
-  const totalLiquidity = Number(market.totalLiquidity) / 1e18; // Shares with 18 decimals
+  const totalLiquidity = Number(market.totalLiquidity); // Already normalized in hook
   const volume = Number(market.totalVolume) / 1e6; // USDC with 6 decimals
   const closeDate = new Date(Number(market.closeTimestamp) * 1000);
   const isClosingSoon = closeDate.getTime() - Date.now() < 24 * 60 * 60 * 1000;
-
-  // Price history (mock data - in production, fetch from subgraph)
-  const priceHistory = market.trades?.slice(-20).map((trade: any, i: number) => ({
-    time: new Date(Number(trade.timestamp) * 1000).toLocaleTimeString(),
-    yes: Number(trade.price) * 100,
-    no: (1 - Number(trade.price)) * 100
-  })) || [];
 
   const handleBuy = async () => {
     if (!isConnected) return;
@@ -162,65 +155,43 @@ export default function MarketDetailPage() {
         <div className="lg:col-span-2">
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Price Chart</CardTitle>
+              <CardTitle>Oracle Status</CardTitle>
             </CardHeader>
             <CardContent>
-              {priceHistory.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={priceHistory}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="yes" stroke="#10b981" name="YES %" />
-                    <Line type="monotone" dataKey="no" stroke="#ef4444" name="NO %" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                  No trading history yet
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Outcome State</span>
+                  <Badge variant={market.oracle?.status === 3 ? 'default' : 'outline'}>
+                    {market.oracle?.status === 0 && 'None'}
+                    {market.oracle?.status === 1 && 'Proposed'}
+                    {market.oracle?.status === 2 && 'Challenged'}
+                    {market.oracle?.status === 3 && 'Finalized'}
+                  </Badge>
                 </div>
-              )}
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Proof Indexed</span>
+                  <span>{market.oracle?.proofAvailable ? 'Yes' : 'Pending'}</span>
+                </div>
+                {market.oracle?.challengeDeadline && market.oracle?.status === 1 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Challenge Window</span>
+                    <span>{Math.ceil((market.oracle.challengeRemaining || 0) / 60)} min remaining</span>
+                  </div>
+                )}
+                {market.oracle?.dispute && (
+                  <div className="rounded-md border p-2">
+                    <div className="font-medium">Dispute Active</div>
+                    <div className="text-muted-foreground">
+                      Proposed: {market.oracle.dispute.proposedResult === 1 ? 'YES' : 'NO'} | Resolved: {market.oracle.dispute.resolved ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Trade History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Trades</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {market.trades && market.trades.length > 0 ? (
-                <div className="space-y-2">
-                  {market.trades.slice(0, 10).map((trade: any) => (
-                    <div key={trade.id} className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={trade.isBuy ? 'default' : 'outline'}>
-                          {trade.isBuy ? 'BUY' : 'SELL'}
-                        </Badge>
-                        <Badge variant={trade.side === 1 ? 'default' : 'secondary'}>
-                          {trade.side === 1 ? 'YES' : 'NO'}
-                        </Badge>
-                        <span className="text-sm">
-                          {(Number(trade.sharesOut) / 1e18).toFixed(2)} shares
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">${(Number(trade.amountIn) / 1e6).toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(Number(trade.timestamp) * 1000).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  No trades yet. Be the first!
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PriceChart marketId={marketId} />
+          <RecentTrades marketId={marketId} />
         </div>
 
         {/* Trading Interface */}

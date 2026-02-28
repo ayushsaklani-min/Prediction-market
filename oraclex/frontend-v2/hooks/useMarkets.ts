@@ -2,27 +2,41 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { usePublicClient } from 'wagmi';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, CHAIN_CONFIG } from '@/config/contracts';
 import { PREDICTION_AMM_ABI, MARKET_FACTORY_ABI } from '@/lib/abis';
+import { getTargetNetworkName } from '@/lib/network';
 import { Market, MarketStatus } from '@/types';
+import { isAddress } from 'viem';
 
-const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL || 'http://localhost:4000';
+function isRpcAuthError(error: unknown): boolean {
+  const message = String((error as any)?.message || '').toLowerCase();
+  return (
+    message.includes('401') ||
+    message.includes('403') ||
+    message.includes('api key disabled') ||
+    message.includes('tenant disabled') ||
+    message.includes('unauthorized')
+  );
+}
 
 export function useMarkets() {
   const publicClient = usePublicClient();
 
   return useQuery<Market[]>({
-    queryKey: ['markets'],
+    queryKey: ['markets', CHAIN_CONFIG.chainId],
     queryFn: async (): Promise<Market[]> => {
       if (!publicClient) return [];
+      if (!isAddress(CONTRACTS.MarketFactory) || !isAddress(CONTRACTS.PredictionAMM)) {
+        console.error('Invalid contract configuration. Check NEXT_PUBLIC_MARKET_FACTORY and NEXT_PUBLIC_PREDICTION_AMM.');
+        return [];
+      }
 
       try {
         // Check network
         const chainId = await publicClient.getChainId();
-        console.log('Connected to chain ID:', chainId);
 
-        if (chainId !== 137) {
-          console.warn('Wrong network! Please connect to Polygon Mainnet (Chain ID: 137)');
+        if (chainId !== CHAIN_CONFIG.chainId) {
+          console.warn(`Wrong network. Please connect to ${getTargetNetworkName(CHAIN_CONFIG.chainId)} (chain ${CHAIN_CONFIG.chainId}).`);
           return [];
         }
 
@@ -34,8 +48,6 @@ export function useMarkets() {
         }) as bigint;
 
         const count = Number(marketCount);
-        console.log('Total markets:', count);
-
         if (count === 0) return [];
 
         // Fetch all market IDs
@@ -100,11 +112,15 @@ export function useMarkets() {
         const markets = await Promise.all(marketDetailsPromises);
         return markets.filter((m): m is Market => m !== null);
       } catch (error) {
-        console.error('Error fetching markets:', error);
+        if (isRpcAuthError(error)) {
+          console.warn('Markets RPC endpoint rejected request (auth/rate limit).');
+        } else {
+          console.error('Error fetching markets:', error);
+        }
 
         // Check if it's a network error
         if (error instanceof Error && error.message.includes('returned no data')) {
-          console.error('Contract not found or wrong network. Please ensure you are connected to Polygon Mainnet.');
+          console.error(`Contract not found or wrong network. Please ensure you are connected to ${getTargetNetworkName(CHAIN_CONFIG.chainId)}.`);
         }
 
         return [];
@@ -112,7 +128,10 @@ export function useMarkets() {
     },
     enabled: !!publicClient,
     refetchInterval: 10000,
-    retry: 1,
+    retry: (failureCount, error) => {
+      if (isRpcAuthError(error)) return false;
+      return failureCount < 1;
+    },
   });
 }
 
@@ -123,6 +142,7 @@ export function useMarket(marketId: string) {
     queryKey: ['market', marketId],
     queryFn: async () => {
       if (!publicClient || !marketId) return null;
+      if (!isAddress(CONTRACTS.MarketFactory) || !isAddress(CONTRACTS.PredictionAMM)) return null;
 
       try {
         // Fetch market data from AMM
@@ -162,7 +182,11 @@ export function useMarket(marketId: string) {
 
         return market;
       } catch (error) {
-        console.error('Error fetching market:', error);
+        if (isRpcAuthError(error)) {
+          console.warn('Market RPC endpoint rejected request (auth/rate limit).');
+        } else {
+          console.error('Error fetching market:', error);
+        }
         return null;
       }
     },
@@ -178,6 +202,7 @@ export function useMarketPrice(marketId: string, side: 0 | 1) {
     queryKey: ['market-price', marketId, side],
     queryFn: async () => {
       if (!publicClient || !marketId) return 0;
+      if (!isAddress(CONTRACTS.PredictionAMM)) return 0;
 
       try {
         const price = await publicClient.readContract({
@@ -189,7 +214,11 @@ export function useMarketPrice(marketId: string, side: 0 | 1) {
 
         return Number(price) / 10000; // convert from basics points
       } catch (error) {
-        console.error('Error fetching price:', error);
+        if (isRpcAuthError(error)) {
+          console.warn('Price RPC endpoint rejected request (auth/rate limit).');
+        } else {
+          console.error('Error fetching price:', error);
+        }
         return 0;
       }
     },

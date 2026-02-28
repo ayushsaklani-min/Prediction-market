@@ -10,12 +10,25 @@
   "scripts": {
     "start:backend": "node backend/server.js",
     "start:frontend": "cd frontend-v2 && npm run dev",
+    "check:backend": "node --check backend/server.js && node --check backend/ai_proxy.js && node --check backend/chainlink_adapter.js && node --check backend/supabase.js",
     "build:frontend": "cd frontend-v2 && npm ci && npm run build",
-    "compile": "npx hardhat compile",
+    "compile": "npx hardhat compile --config hardhat-v2.config.js",
     "compile:v2": "npx hardhat compile --config hardhat-v2.config.js",
+    "size": "npx hardhat compile --config hardhat-v2.config.js",
+    "lint": "cd frontend-v2 && npm run lint",
+    "format": "npx prettier --write \"backend/**/*.js\" \"scripts-v2/**/*.js\" \"frontend-v2/**/*.{ts,tsx,js,jsx,json,md}\" \"*.{md,json}\"",
+    "format:check": "npx prettier --check \"backend/**/*.js\" \"scripts-v2/**/*.js\" \"frontend-v2/**/*.{ts,tsx,js,jsx,json,md}\" \"*.{md,json}\"",
     "test:hh": "npx hardhat test",
-    "deploy:v2": "npx hardhat run scripts-v2/deploy-v2.js --network amoy",
-    "create:demo": "npx hardhat run scripts-v2/create-demo-markets.js --network amoy",
+    "test": "npx hardhat test --config hardhat-v2.config.js",
+    "test:coverage": "npx hardhat coverage --config hardhat-v2.config.js",
+    "test:gas": "cross-env REPORT_GAS=true npx hardhat test --config hardhat-v2.config.js",
+    "deploy:testnet": "npx hardhat run scripts-v2/deploy-v2.js --network amoy",
+    "deploy:v2": "npx hardhat run scripts-v2/deploy-v2.js --network polygon",
+    "deploy:mainnet": "npx hardhat run scripts-v2/deploy-v2.js --network polygon",
+    "verify": "npx hardhat run scripts-v2/verify-v2.js --config hardhat-v2.config.js --network polygon",
+    "create:demo": "npx hardhat run scripts-v2/create-demo-markets.js --network polygon",
+    "demo:local": "node scripts-v2/demo-local.js",
+    "ci:check": "npm run check:backend && npm run compile:v2 && npm test && npm run build:frontend",
     "subgraph:codegen": "cd subgraph && npm run codegen",
     "subgraph:build": "cd subgraph && npm run build",
     "subgraph:deploy": "cd subgraph && npm run deploy",
@@ -39,6 +52,9 @@
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.10"
+    "cross-env": "^7.0.3",
+    "hardhat": "^2.22.10",
+    "prettier": "^3.6.2",
+    "solhint": "^5.1.0"
   }
 }

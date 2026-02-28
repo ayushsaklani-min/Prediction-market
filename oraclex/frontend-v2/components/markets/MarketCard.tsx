@@ -26,7 +26,7 @@ export function MarketCard({ market }: MarketCardProps) {
 
   return (
     <Link href={`/markets/${market.marketId}`}>
-      <Card className="card-hover h-full transition-all">
+      <Card className="card-hover h-full border-border/70 bg-white/95 shadow-sm">
         <CardHeader className="space-y-2">
           <div className="flex items-start justify-between gap-2">
             <Badge className={getCategoryColor(market.category)}>
@@ -86,7 +86,7 @@ export function MarketCard({ market }: MarketCardProps) {
           </div>
         </CardContent>
 
-        <CardFooter className="flex items-center justify-between border-t pt-4">
+        <CardFooter className="flex items-center justify-between border-t border-border/70 pt-4">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Clock className="h-3 w-3" />
             {timeRemaining}

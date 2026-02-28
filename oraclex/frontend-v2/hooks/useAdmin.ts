@@ -144,8 +144,11 @@ export function useAdmin() {
   };
 
   // Propose outcome (oracle role)
-  const proposeOutcome = async (marketId: string, result: 0 | 1, proof: string = '0x') => {
+  const proposeOutcome = async (marketId: string, result: 0 | 1, proof: string) => {
     try {
+      if (!proof || proof === '0x') {
+        throw new Error('Proof bytes are required to propose an outcome');
+      }
       const hash = await writeContractAsync({
         address: CONTRACTS.OracleAdapter,
         abi: ORACLE_ADAPTER_ABI,

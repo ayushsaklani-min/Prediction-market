@@ -1,7 +1,7 @@
 'use client';
 
 import { useWriteContract, useAccount } from 'wagmi';
-import { CONTRACTS } from '@/config/contracts';
+import { CONTRACTS, isConfiguredAddress } from '@/config/contracts';
 import { GOVERNANCE_ABI } from '@/lib/abis';
 import { toast } from 'sonner';
 import { usePublicClient } from 'wagmi';
@@ -14,6 +14,10 @@ export function useVoting() {
   const castVote = async (proposalId: bigint, support: 0 | 1 | 2) => {
     if (!address) {
       toast.error('Please connect your wallet');
+      return;
+    }
+    if (!isConfiguredAddress(CONTRACTS.Governance)) {
+      toast.error('Governance contract is not configured');
       return;
     }
 

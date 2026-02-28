@@ -15,7 +15,28 @@ import * as supabaseDb from './supabase.js';
 
 const app = express();
 app.use(express.json({ limit: '100kb' })); // Limit request size
-app.use(cors({ origin: '*' }));
+const isProduction = process.env.NODE_ENV === 'production';
+const defaultDevOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const configuredOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (isProduction && configuredOrigins.length === 0) {
+  throw new Error('CORS_ORIGIN must be set in production.');
+}
+
+const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultDevOrigins;
+app.use(cors({
+  origin(origin, callback) {
+    // Allow non-browser clients (no origin) and explicitly configured web origins.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin not allowed by CORS'));
+  }
+}));
 
 // Rate limiting for market creation (5 requests per 15 minutes per IP)
 const createMarketLimiter = rateLimit({
@@ -26,23 +47,48 @@ const createMarketLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: 'Too many admin requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Render sets PORT automatically, fallback to BACKEND_PORT or 4000
 const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
 const WSP = process.env.WS_PORT || 4001;
 const root = process.cwd();
+const auditLogPath = path.join(root, 'backend', 'audit.log');
 
-const deployedPath = path.join(root, 'deployed.json');
-let deployed = fs.existsSync(deployedPath) ? JSON.parse(fs.readFileSync(deployedPath, 'utf8')) : null;
+const deployedV2Path = path.join(root, 'deployed-v2.json');
+const deployedLegacyPath = path.join(root, 'deployed.json');
+let deployed = null;
+if (fs.existsSync(deployedV2Path)) {
+  deployed = JSON.parse(fs.readFileSync(deployedV2Path, 'utf8'));
+} else if (fs.existsSync(deployedLegacyPath)) {
+  deployed = JSON.parse(fs.readFileSync(deployedLegacyPath, 'utf8'));
+}
 
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = process.env.PRIVATE_KEY ? new ethers.Wallet(process.env.PRIVATE_KEY, provider) : null;
 
+if (!process.env.RPC_URL) {
+  console.warn('RPC_URL is not set. On-chain endpoints will fail until RPC_URL is configured.');
+}
+
+if (!wallet) {
+  console.warn('PRIVATE_KEY is not set. Admin and settlement operations requiring signer access are disabled.');
+}
+
 function findArtifactPath(name) {
+  const hhV2Root = path.join(root, 'artifacts-v2', 'contracts-v2');
   const hhRoot = path.join(root, 'artifacts', 'contracts');
   const fdy = path.join(root, 'out', `${name}.sol`, `${name}.json`);
   if (fs.existsSync(fdy)) return fdy;
-  if (!fs.existsSync(hhRoot)) return null;
-  const stack = [hhRoot];
+  const roots = [hhV2Root, hhRoot].filter((p) => fs.existsSync(p));
+  if (roots.length === 0) return null;
+  const stack = [...roots];
   while (stack.length) {
     const dir = stack.pop();
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -63,7 +109,7 @@ function loadArtifact(name) {
 }
 
 const artifacts = {};
-['OracleXMarketFactory', 'OracleXVerifier', 'OracleXVault'].forEach(n => {
+['MarketFactoryV2', 'VerifierV2', 'PredictionAMM', 'OracleAdapterV2'].forEach(n => {
   try { artifacts[n] = loadArtifact(n); } catch (e) { /* ignore until built */ }
 });
 
@@ -80,7 +126,20 @@ const ERC20_ABI = [
 
 function getContract(name, address) {
   const a = artifacts[name] || loadArtifact(name);
-  return new ethers.Contract(address, a.abi, wallet);
+  return new ethers.Contract(address, a.abi, wallet || provider);
+}
+
+function getDeployedContracts() {
+  if (!deployed) {
+    if (fs.existsSync(deployedV2Path)) {
+      deployed = JSON.parse(fs.readFileSync(deployedV2Path, 'utf8'));
+    } else if (fs.existsSync(deployedLegacyPath)) {
+      deployed = JSON.parse(fs.readFileSync(deployedLegacyPath, 'utf8'));
+    } else {
+      return {};
+    }
+  }
+  return deployed.contracts || deployed;
 }
 
 function getUSDCContract(address) {
@@ -109,14 +168,94 @@ function broadcast(msg) {
   }
 }
 
+function hasAdminAccess(req) {
+  if (!process.env.ADMIN_API_KEY) return false;
+  return req.headers['x-api-key'] === process.env.ADMIN_API_KEY;
+}
+
+function appendAuditLog(entry) {
+  const line = JSON.stringify({ timestamp: new Date().toISOString(), ...entry }) + '\n';
+  try {
+    fs.appendFileSync(auditLogPath, line);
+  } catch (err) {
+    console.warn('Failed to write audit log:', err?.message || err);
+  }
+}
+
+function logAdminAction(req, action, status, details = {}) {
+  appendAuditLog({
+    action,
+    status,
+    ip: req.ip,
+    path: req.path,
+    userAgent: req.headers['user-agent'] || '',
+    details,
+  });
+}
+
+const usedCreateMarketNonces = new Map();
+const MAX_SIGNATURE_TTL_SECONDS = 15 * 60;
+
+function buildCreateMarketMessage({
+  creatorAddress,
+  eventId,
+  description,
+  closeTimestamp,
+  chainId,
+  nonce,
+  expiresAt,
+}) {
+  return [
+    'OracleX Create Market Authorization',
+    `creator=${String(creatorAddress).toLowerCase()}`,
+    `eventId=${eventId}`,
+    `description=${description}`,
+    `closeTimestamp=${closeTimestamp}`,
+    `chainId=${chainId}`,
+    `nonce=${nonce}`,
+    `expiresAt=${expiresAt}`,
+  ].join('\n');
+}
+
+function isCreateMarketNonceUsed(address, nonce) {
+  const lower = String(address).toLowerCase();
+  const nonceSet = usedCreateMarketNonces.get(lower);
+  return nonceSet ? nonceSet.has(nonce) : false;
+}
+
+function markCreateMarketNonceUsed(address, nonce, expiresAt) {
+  const lower = String(address).toLowerCase();
+  const nonceSet = usedCreateMarketNonces.get(lower) || new Set();
+  nonceSet.add(nonce);
+  usedCreateMarketNonces.set(lower, nonceSet);
+
+  const ttlMs = Math.max(0, (Number(expiresAt) - Math.floor(Date.now() / 1000)) * 1000);
+  setTimeout(() => {
+    const setRef = usedCreateMarketNonces.get(lower);
+    if (!setRef) return;
+    setRef.delete(nonce);
+    if (setRef.size === 0) usedCreateMarketNonces.delete(lower);
+  }, ttlMs);
+}
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    services: {
+      rpcConfigured: Boolean(process.env.RPC_URL),
+      signerConfigured: Boolean(wallet),
+      adminKeyConfigured: Boolean(process.env.ADMIN_API_KEY),
+      supabaseConfigured: Boolean(supabaseDb.supabase),
+    },
+  });
 });
 
 app.get('/addresses', (req, res) => {
   try {
-    if (!deployed && fs.existsSync(deployedPath)) deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
+    if (!deployed && fs.existsSync(deployedV2Path)) deployed = JSON.parse(fs.readFileSync(deployedV2Path, 'utf8'));
+    if (!deployed && fs.existsSync(deployedLegacyPath)) deployed = JSON.parse(fs.readFileSync(deployedLegacyPath, 'utf8'));
     res.json(deployed || {});
   } catch (e) {
     res.status(500).json({ error: String(e) });
@@ -266,17 +405,36 @@ async function verifyWalletSignature(address, message, signature) {
 
 app.post('/create-market', createMarketLimiter, async (req, res) => {
   try {
-    let { eventId, description, closeTimestamp, creatorAddress, signature, message } = req.body;
-    
-    // Verify wallet signature if provided
-    if (creatorAddress && signature && message) {
-      const isValid = await verifyWalletSignature(creatorAddress, message, signature);
-      if (!isValid) {
-        return res.status(401).json({ error: 'Invalid wallet signature' });
-      }
-    } else {
-      // Fallback: use deployer wallet address if no signature provided
-      creatorAddress = wallet ? await wallet.getAddress() : ethers.ZeroAddress;
+    let {
+      eventId,
+      description,
+      closeTimestamp,
+      creatorAddress,
+      signature,
+      message,
+      nonce,
+      expiresAt,
+    } = req.body;
+    const now = Math.floor(Date.now() / 1000);
+    if (!creatorAddress || !signature || !nonce || !expiresAt) {
+      return res.status(400).json({
+        error: 'creatorAddress, signature, nonce, and expiresAt are required',
+      });
+    }
+    if (typeof nonce !== 'string' || nonce.length < 8 || nonce.length > 128) {
+      return res.status(400).json({ error: 'Invalid nonce format' });
+    }
+    if (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt)) {
+      return res.status(400).json({ error: 'expiresAt must be a unix timestamp in seconds' });
+    }
+    if (expiresAt <= now) {
+      return res.status(400).json({ error: 'Signature expired' });
+    }
+    if (expiresAt > now + MAX_SIGNATURE_TTL_SECONDS) {
+      return res.status(400).json({ error: 'Signature expiry too far in future' });
+    }
+    if (isCreateMarketNonceUsed(creatorAddress, nonce)) {
+      return res.status(409).json({ error: 'Nonce already used' });
     }
     
     // Sanitize inputs
@@ -302,6 +460,22 @@ app.post('/create-market', createMarketLimiter, async (req, res) => {
     
     const network = await provider.getNetwork();
     const chainId = Number(network.chainId);
+    const expectedMessage = buildCreateMarketMessage({
+      creatorAddress,
+      eventId,
+      description,
+      closeTimestamp,
+      chainId,
+      nonce,
+      expiresAt,
+    });
+    if (message && message !== expectedMessage) {
+      return res.status(400).json({ error: 'Signed message mismatch' });
+    }
+    const isValid = await verifyWalletSignature(creatorAddress, expectedMessage, signature);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid wallet signature' });
+    }
     
     // Generate market ID
     const marketId = ethers.solidityPackedKeccak256(
@@ -336,6 +510,8 @@ app.post('/create-market', createMarketLimiter, async (req, res) => {
     } else {
       markets.set(marketId, { eventId, description, closeTimestamp, vault: null, probability: null });
     }
+
+    markCreateMarketNonceUsed(creatorAddress, nonce, expiresAt);
     
     broadcast({ type: 'market_created', marketId, eventId, description, closeTimestamp });
     res.json({ marketId });
@@ -348,15 +524,27 @@ app.post('/create-market', createMarketLimiter, async (req, res) => {
 // Gas estimation endpoint
 app.post('/estimate-gas', async (req, res) => {
   try {
-    if (!deployed) deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-    const { eventId, description, closeTimestamp } = req.body;
+    const contracts = getDeployedContracts();
+    if (!contracts.MarketFactoryV2) {
+      return res.status(500).json({ error: 'MarketFactoryV2 not configured in deployment file.' });
+    }
+    const { eventId, description, category = 5, tags = [], closeTimestamp, resolutionTimestamp, initialYes, initialNo } = req.body;
     
-    if (!eventId || !description || !closeTimestamp) {
+    if (!eventId || !description || !closeTimestamp || !resolutionTimestamp || !initialYes || !initialNo) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
-    const factory = getContract('OracleXMarketFactory', deployed.OracleXMarketFactory);
-    const gasEstimate = await factory.createMarket.estimateGas(eventId, description, closeTimestamp);
+    const factory = getContract('MarketFactoryV2', contracts.MarketFactoryV2);
+    const gasEstimate = await factory.createMarket.estimateGas(
+      eventId,
+      description,
+      Number(category),
+      tags,
+      BigInt(closeTimestamp),
+      BigInt(resolutionTimestamp),
+      BigInt(initialYes),
+      BigInt(initialNo)
+    );
     const gasPrice = await provider.getFeeData();
     
     const estimatedCost = gasEstimate * (gasPrice.gasPrice || gasPrice.maxFeePerGas || 0n);
@@ -374,10 +562,29 @@ app.post('/estimate-gas', async (req, res) => {
   }
 });
 
-app.post('/deploy-market', createMarketLimiter, async (req, res) => {
+app.post('/deploy-market', createMarketLimiter, adminLimiter, async (req, res) => {
   try {
-    if (!deployed) deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-    const { marketId, eventId, description, closeTimestamp } = req.body;
+    if (!hasAdminAccess(req)) {
+      logAdminAction(req, 'deploy-market', 'unauthorized');
+      return res.status(401).json({
+        error: 'Unauthorized. Missing or invalid x-api-key for admin endpoint.',
+      });
+    }
+    const contracts = getDeployedContracts();
+    if (!contracts.MarketFactoryV2) {
+      return res.status(500).json({ error: 'MarketFactoryV2 not configured in deployment file.' });
+    }
+    const {
+      marketId,
+      eventId,
+      description,
+      category = 5,
+      tags = [],
+      closeTimestamp,
+      resolutionTimestamp,
+      initialYes,
+      initialNo
+    } = req.body;
     
     // Validate inputs
     const validationErrors = validateMarketInput(eventId, description, closeTimestamp);
@@ -398,7 +605,7 @@ app.post('/deploy-market', createMarketLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Market not found. Please create the market first.' });
     }
     
-    const factory = getContract('OracleXMarketFactory', deployed.OracleXMarketFactory);
+    const factory = getContract('MarketFactoryV2', contracts.MarketFactoryV2);
     
     // Check if wallet has funds for gas
     if (wallet) {
@@ -410,26 +617,32 @@ app.post('/deploy-market', createMarketLimiter, async (req, res) => {
       return res.status(500).json({ error: 'No deployer wallet configured' });
     }
     
-    const tx = await factory.createMarket(eventId, description, closeTimestamp);
+    const tx = await factory.createMarket(
+      eventId,
+      description,
+      Number(category),
+      tags,
+      BigInt(closeTimestamp),
+      BigInt(resolutionTimestamp),
+      BigInt(initialYes),
+      BigInt(initialNo)
+    );
     const rc = await tx.wait();
     
-    let vaultAddr = null;
     let onChainId = null;
     for (const l of rc.logs) {
       try {
-        const i = new ethers.Interface(loadArtifact('OracleXMarketFactory').abi);
+        const i = new ethers.Interface(loadArtifact('MarketFactoryV2').abi);
         const parsed = i.parseLog(l);
         if (parsed && parsed.name === 'MarketCreated') {
           onChainId = parsed.args[0];
-          vaultAddr = parsed.args[1];
           break;
         }
       } catch (_) {}
     }
     
-    if (!vaultAddr || !onChainId) {
-      // Transaction succeeded but we couldn't parse logs - this is a critical error
-      const errorMsg = 'Deployment succeeded but vault address not found in logs';
+    if (!onChainId) {
+      const errorMsg = 'Deployment succeeded but MarketCreated event was not decoded';
       if (supabaseDb.supabase) {
         await supabaseDb.updateMarket(marketId, { deploy_error: errorMsg });
       } else {
@@ -444,20 +657,19 @@ app.post('/deploy-market', createMarketLimiter, async (req, res) => {
     // Successfully deployed - update market record
     if (supabaseDb.supabase) {
       await supabaseDb.updateMarket(marketId, {
-        vault_address: vaultAddr,
         market_id: onChainId, // Update to on-chain ID
         deployed_at: new Date().toISOString(),
         deploy_error: null,
       });
     } else {
       const m = markets.get(marketId) || { eventId, description, closeTimestamp };
-      m.vault = vaultAddr;
       markets.delete(marketId);
       markets.set(onChainId, m);
     }
     
-    broadcast({ type: 'market_deployed', marketId: onChainId, vault: vaultAddr });
-    res.json({ marketId: onChainId, vault: vaultAddr });
+    logAdminAction(req, 'deploy-market', 'success', { marketId: onChainId });
+    broadcast({ type: 'market_deployed', marketId: onChainId });
+    res.json({ marketId: onChainId });
   } catch (e) {
     console.error('Error deploying market:', e);
     // If deployment fails, mark it in database
@@ -476,14 +688,20 @@ app.post('/deploy-market', createMarketLimiter, async (req, res) => {
   }
 });
 
-app.post('/ai-run', async (req, res) => {
+app.post('/ai-run', adminLimiter, async (req, res) => {
   try {
-    if (!deployed) {
-      if (fs.existsSync(deployedPath)) {
-        deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-      } else {
-        return res.status(500).json({ error: 'Contracts not deployed. Run deploy_all.js first.' });
-      }
+    if (!hasAdminAccess(req)) {
+      logAdminAction(req, 'ai-run', 'unauthorized');
+      return res.status(401).json({
+        error: 'Unauthorized. Missing or invalid x-api-key for admin endpoint.',
+      });
+    }
+    const contracts = getDeployedContracts();
+    if (!contracts.PredictionAMM) {
+      return res.status(500).json({ error: 'PredictionAMM not configured in deployment file.' });
+    }
+    if (!contracts.VerifierV2) {
+      return res.status(500).json({ error: 'VerifierV2 not configured in deployment file.' });
     }
     const { marketId, eventId, description, closeTimestamp } = req.body;
     if (!marketId || !eventId || !description) {
@@ -516,7 +734,10 @@ app.post('/ai-run', async (req, res) => {
         if (result.error) {
           return res.status(500).json({ error: result.error });
         }
-        const { probability, explanation, aiHash } = result;
+        const { probability, explanation, aiHash, proof, outcome, ipfsCid } = result;
+        if (typeof proof !== 'string' || !proof.startsWith('0x') || proof.length <= 2) {
+          return res.status(500).json({ error: 'AI proxy returned invalid proof bytes' });
+        }
         
         // Convert marketId to bytes32 if it's a string
         let marketIdBytes32 = marketId;
@@ -526,17 +747,43 @@ app.post('/ai-run', async (req, res) => {
           marketIdBytes32 = ethers.solidityPackedKeccak256(['string'], [marketId]);
         }
         
-        const verifier = getContract('OracleXVerifier', deployed.OracleXVerifier);
-        const tx = await verifier.commitAI(marketIdBytes32, aiHash, '');
-        await tx.wait();
+        try {
+          const verifier = getContract('VerifierV2', contracts.VerifierV2);
+          const tx = await verifier.commitAI(marketIdBytes32, aiHash, 1, proof, ipfsCid || '');
+          await tx.wait();
+        } catch (chainErr) {
+          // Non-fatal: commitment submission requires VERIFIER_ROLE.
+          console.warn('AI commitment not submitted on-chain:', chainErr?.message || chainErr);
+        }
         
         const m = markets.get(marketId) || markets.get(marketIdBytes32) || { eventId, description, closeTimestamp };
         m.probability = probability;
+        m.proof = proof;
+        m.aiHash = aiHash;
+        m.outcome = outcome;
+        m.ipfsCid = ipfsCid || null;
         markets.set(marketId, m);
         markets.set(marketIdBytes32, m);
+
+        // Persist AI output for analytics when market exists in Supabase.
+        if (supabaseDb.supabase) {
+          try {
+            await supabaseDb.updateMarket(marketIdBytes32, {
+              probability,
+              outcome,
+              ai_hash: aiHash,
+              proof,
+              proof_hash: ethers.keccak256(proof),
+              proof_cid: ipfsCid || null,
+            });
+          } catch (_) {
+            // Non-fatal: some markets may only exist in memory during local flows.
+          }
+        }
         
-        broadcast({ type: 'ai_committed', marketId, probability, explanation, aiHash });
-        res.json({ probability, explanation, aiHash });
+        logAdminAction(req, 'ai-run', 'success', { marketId: marketIdBytes32, aiHash, outcome });
+        broadcast({ type: 'ai_committed', marketId, probability, explanation, aiHash, proof, outcome, ipfsCid: ipfsCid || null });
+        res.json({ probability, explanation, aiHash, proof, outcome, ipfsCid: ipfsCid || null });
       } catch (parseErr) {
         console.error('Failed to parse AI output:', parseErr, 'Output:', out);
         res.status(500).json({ error: `Failed to parse AI output: ${String(parseErr)}` });
@@ -554,134 +801,38 @@ app.post('/ai-run', async (req, res) => {
 });
 
 app.post('/allocate', async (req, res) => {
-  try {
-    if (!deployed) {
-      if (fs.existsSync(deployedPath)) {
-        deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-      } else {
-        return res.status(500).json({ error: 'Contracts not deployed. Run deploy_all.js first.' });
-      }
-    }
-    const { marketId } = req.body;
-    if (!marketId) {
-      return res.status(400).json({ error: 'marketId is required' });
-    }
-    
-    // Try both marketId formats
-    let m = markets.get(marketId);
-    if (!m) {
-      // Try as bytes32 if it's a hex string
-      const marketIdBytes32 = typeof marketId === 'string' && marketId.startsWith('0x') 
-        ? marketId 
-        : ethers.solidityPackedKeccak256(['string'], [marketId]);
-      m = markets.get(marketIdBytes32);
-    }
-    
-    if (!m || !m.vault) {
-      return res.status(404).json({ error: 'Market not found or vault not deployed' });
-    }
-    
-    const contract = getContract('OracleXVault', m.vault);
-    const usdc = getUSDCContract(deployed.USDC);
-    const bal = await usdc.balanceOf(m.vault);
-    
-    if (bal === 0n) {
-      return res.status(400).json({ error: 'Vault has no balance to allocate' });
-    }
-    
-    const prob = (m && m.probability != null) ? m.probability : 50;
-    const yesAmt = (bal * BigInt(prob)) / 100n;
-    const noAmt = bal - yesAmt;
-    
-    const tx = await contract.allocateLiquidity(yesAmt, noAmt);
-    await tx.wait();
-    
-    broadcast({ type: 'allocated', marketId, yesAmt: yesAmt.toString(), noAmt: noAmt.toString() });
-    res.json({ yesAmt: yesAmt.toString(), noAmt: noAmt.toString() });
-  } catch (e) {
-    console.error('Allocate endpoint error:', e);
-    res.status(500).json({ error: String(e) });
-  }
+  res.status(410).json({ error: 'Deprecated in V2. Initial liquidity is supplied during createMarket.' });
 });
 
-// Chainlink Functions integration endpoint
-// This endpoint should be called by Chainlink Functions DON when the market closes
-// For now, this is a placeholder that can be integrated with Chainlink Functions
-app.post('/settle-market', async (req, res) => {
+// Oracle attestation settlement endpoint
+app.post('/settle-market', adminLimiter, async (req, res) => {
   try {
-    if (!deployed) {
-      if (fs.existsSync(deployedPath)) {
-        deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-      } else {
-        return res.status(500).json({ error: 'Contracts not deployed. Run deploy_all.js first.' });
-      }
+    if (process.env.ENABLE_DIRECT_SETTLEMENT !== 'true') {
+      return res.status(403).json({
+        error: 'Direct backend settlement is disabled. Use OracleAdapterV2 propose/finalize flow on-chain.',
+      });
     }
-    const { marketId, winningSide } = req.body;
-    if (!marketId || winningSide === undefined) {
-      return res.status(400).json({ error: 'marketId and winningSide are required' });
+
+    if (!hasAdminAccess(req)) {
+      logAdminAction(req, 'settle-market', 'unauthorized');
+      return res.status(401).json({
+        error: 'Unauthorized. Missing or invalid x-api-key for admin endpoint.',
+      });
+    }
+    const contracts = getDeployedContracts();
+    const { marketId, winningSide, proof } = req.body;
+    if (!marketId || winningSide === undefined || !proof) {
+      return res.status(400).json({ error: 'marketId, winningSide, and proof are required' });
+    }
+    if (typeof proof !== 'string' || !proof.startsWith('0x') || proof.length <= 2) {
+      return res.status(400).json({ error: 'proof must be non-empty 0x-prefixed bytes' });
     }
     
     if (!wallet) {
       return res.status(500).json({ error: 'Backend wallet not configured. Set PRIVATE_KEY in .env' });
     }
     
-    // Find the market in our map - try both the provided marketId and as bytes32
-    let marketIdBytes32 = marketId;
-    let marketData = markets.get(marketId);
-    
-    // If market not found, try converting to bytes32
-    if (!marketData) {
-      if (typeof marketId === 'string' && marketId.startsWith('0x') && marketId.length === 66) {
-        marketIdBytes32 = marketId;
-      } else {
-        // Try to find it in the map by iterating (marketId might be hex string)
-        for (const [key, value] of markets.entries()) {
-          if (key.toLowerCase() === marketId.toLowerCase()) {
-            marketIdBytes32 = key;
-            marketData = value;
-            break;
-          }
-        }
-      }
-    } else {
-      marketIdBytes32 = marketId;
-    }
-    
-    // Verify the market exists and has a vault
-    if (!marketData || !marketData.vault) {
-      return res.status(404).json({ error: 'Market not found or vault not deployed. MarketId: ' + marketId });
-    }
-    
-    // Verify the vault exists on-chain and check its state
-    const vault = getContract('OracleXVault', marketData.vault);
-    let vaultState;
-    try {
-      vaultState = await vault.state();
-      console.log('Vault state:', vaultState, '(0=Open, 1=Locked, 2=Settled)');
-    } catch (e) {
-      console.error('Vault check failed:', e);
-      return res.status(404).json({ error: 'Vault not found on-chain at address: ' + marketData.vault });
-    }
-    
-    // Check if vault is already settled (state === 2)
-    if (Number(vaultState) === 2) {
-      try {
-        const winningSideStored = await vault.winningSide();
-        return res.status(400).json({ 
-          error: 'Market is already settled', 
-          details: `Market was already settled with winning side: ${winningSideStored === 0 ? 'NO' : 'YES'}`,
-          alreadySettled: true,
-          winningSide: Number(winningSideStored)
-        });
-      } catch (e) {
-        return res.status(400).json({ 
-          error: 'Market is already settled',
-          alreadySettled: true
-        });
-      }
-    }
-    
-    // Ensure marketIdBytes32 is a valid bytes32
+    const marketIdBytes32 = marketId;
     if (typeof marketIdBytes32 !== 'string' || !marketIdBytes32.startsWith('0x') || marketIdBytes32.length !== 66) {
       return res.status(400).json({ error: 'Invalid marketId format. Expected 0x-prefixed hex string of 66 characters.' });
     }
@@ -691,25 +842,27 @@ app.post('/settle-market', async (req, res) => {
       return res.status(400).json({ error: 'winningSide must be 0 (NO) or 1 (YES)' });
     }
     
-    // Call OracleAdapter directly to settle the market
-    // In production, this would be called by Chainlink Functions DON
-    console.log('Settling market with marketId:', marketIdBytes32, 'winningSide:', winningSideNum);
-    const adapter = getContract('OracleXOracleAdapter', deployed.OracleXOracleAdapter);
+    if (!contracts.OracleAdapterV2) {
+      return res.status(500).json({ error: 'OracleAdapterV2 not configured in deployment file.' });
+    }
+    console.log('Proposing settlement with marketId:', marketIdBytes32, 'winningSide:', winningSideNum);
+    const oracle = getContract('OracleAdapterV2', contracts.OracleAdapterV2);
     
     try {
-      const tx = await adapter.pushOutcome(marketIdBytes32, winningSideNum);
+    const tx = await oracle.proposeOutcome(marketIdBytes32, winningSideNum, proof);
       console.log('Transaction sent:', tx.hash);
       const receipt = await tx.wait();
       console.log('Transaction confirmed:', receipt.hash);
       
-      broadcast({ type: 'settled', marketId: marketIdBytes32, winningSide: winningSideNum });
+      logAdminAction(req, 'settle-market', 'success', { marketId: marketIdBytes32, winningSide: winningSideNum, txHash: tx.hash });
+      broadcast({ type: 'outcome_proposed', marketId: marketIdBytes32, winningSide: winningSideNum });
       res.json({ ok: true, txHash: tx.hash });
     } catch (txError) {
-      // If the error is about already settled, return a clearer message
-      if (txError.reason && (txError.reason.includes('already') || txError.reason.includes('settled'))) {
+      // If the outcome already exists, return a clearer message.
+      if (txError.reason && (txError.reason.includes('outcome exists') || txError.reason.includes('already'))) {
         return res.status(400).json({ 
-          error: 'Market is already settled',
-          alreadySettled: true
+          error: 'Outcome already proposed or market already finalized',
+          alreadyProcessed: true
         });
       }
       throw txError; // Re-throw other errors
@@ -717,40 +870,37 @@ app.post('/settle-market', async (req, res) => {
   } catch (e) {
     console.error('Settle market endpoint error:', e);
     const errorMsg = e.reason || e.message || String(e);
+    logAdminAction(req, 'settle-market', 'error', { error: errorMsg });
     res.status(500).json({ error: errorMsg, details: e.toString() });
   }
 });
 
-// Faucet endpoint removed - users must obtain USDC from testnet faucets or bridges
+// Faucet endpoint removed - users must obtain USDC from supported on-chain sources
 
 app.post('/deposit', async (req, res) => {
-  try {
-    if (!deployed) deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
-    const { marketId, vault, side, amount } = req.body;
-    const m = markets.get(marketId);
-    const v = vault || (m && m.vault);
-    if (!v) throw new Error('Vault not found');
-    const usdc = getUSDCContract(deployed.USDC);
-    const vaultC = getContract('OracleXVault', v);
-    const amt = BigInt(amount);
-    const t1 = await usdc.approve(v, amt);
-    await t1.wait();
-    const t2 = await vaultC.deposit(Number(side), amt);
-    await t2.wait();
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: String(e) });
-  }
+  res.status(410).json({ error: 'Deprecated in V2. Use PredictionAMM.buy/sell from the frontend.' });
 });
 
 app.get('/get-commitment/:marketId', async (req, res) => {
   try {
-    if (!deployed) deployed = JSON.parse(fs.readFileSync(deployedPath, 'utf8'));
+    const contracts = getDeployedContracts();
+    if (!contracts.VerifierV2) {
+      return res.status(500).json({ error: 'VerifierV2 not configured in deployment file.' });
+    }
     const marketId = req.params.marketId;
-    const verifier = getContract('OracleXVerifier', deployed.OracleXVerifier);
-    const aiHash = await verifier.getCommitment(marketId);
-    res.json({ marketId, aiHash });
+    const verifier = getContract('VerifierV2', contracts.VerifierV2);
+    const commitment = await verifier.getCommitment(marketId);
+    res.json({
+      marketId,
+      commitmentHash: commitment[0],
+      proofType: Number(commitment[1]),
+      submitter: commitment[2],
+      timestamp: commitment[3].toString(),
+      ipfsCid: commitment[4],
+      verified: commitment[5],
+    });
   } catch (e) {
+    logAdminAction(req, 'deploy-market', 'error', { error: String(e) });
     res.status(500).json({ error: String(e) });
   }
 });

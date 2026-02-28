@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStaking } from '@/hooks/useStaking';
 import { formatORX, formatTimestamp } from '@/lib/utils';
-import { Lock, Plus, Clock, ArrowRight } from 'lucide-react';
+import { Lock, Plus, Clock } from 'lucide-react';
 import { formatUnits } from 'viem';
 
 const LOCK_DURATIONS = [

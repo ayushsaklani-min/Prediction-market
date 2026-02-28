@@ -1,6 +1,6 @@
 # 🔮 OracleX - Decentralized Prediction Market
 
-> **Live on Polygon Mainnet (Test Mode)** 🚀
+> **Live on Polygon Mainnet** 🚀
 > 
 > A next-generation prediction market platform combining DeFi, AMM, and AI Oracles.
 
@@ -10,27 +10,27 @@
 
 ## 🌟 Overview
 
-OracleX represents the future of decentralized forecasting. By leveraging **Polygon Mainnet** for speed and low fees, and **AI Oracles** for reliable settlement, we enable users to trade on the outcome of any future event with confidence.
+OracleX represents the future of decentralized forecasting. By leveraging **Polygon Mainnet** for fast execution and low fees, and **AI Oracles** for reliable settlement, we enable users to trade on the outcome of any future event with confidence.
 
-**⚠️ Current Status: Test Mode on Mainnet**
-The protocol is deployed on Polygon Mainnet but configured to use a **TestUSDC** token. This allows you to test the full "Mainnet Experience" (wallets, block times, gas) without risking real capital.
+**⚠️ Current Status: Beta on Mainnet**
+This deployment is for product/security validation using TestUSDC and should not be treated as production real-value markets.
 
 ### Key Features
 
 - 🎯 **Prediction Markets** - Create and trade on sports, crypto, politics, and more.
-- 🤖 **AI Oracle Integration** - Markets are resolved automatically by AI agents (with dispute fallback).
+- 🤖 **AI Oracle Integration (Beta)** - Markets use commitment + proof verification flows; advanced attestation paths are staged for future releases.
 - 💰 **AMM Trading** - Constant Product Market Maker (CPMM) ensures instant liquidity.
-- 💸 **Test Mode** - Integrated TestUSDC faucet for risk-free testing on Mainnet.
+- 💸 **Beta Economics** - Integrated TestUSDC flow for risk-free protocol testing on Mainnet.
 - 📊 **Real-time Analytics** - Live positions, PL tracking, and market trends.
 
 ---
 
-## 🚀 Getting Started (Test Mode)
+## 🚀 Getting Started (Beta Mode)
 
 Follow these steps to run the application locally and interact with the live contracts on Polygon Mainnet.
 
 ### 1. Prerequisites
-- Node.js 18+
+- Node.js 20+
 - MetaMask Wallet (connected to Polygon Mainnet)
 - Small amount of MATIC for gas fees (it's Mainnet!)
 
@@ -76,6 +76,12 @@ npm run start:frontend
 ```
 > Runs on `http://localhost:3000`
 
+### 5. One-Click Local Demo
+```bash
+npm run demo:local
+```
+This starts a local Hardhat node, deploys contracts, seeds demo markets, and launches backend/frontend.
+
 ---
 
 ## 📋 Smart Contracts (Polygon Mainnet)
@@ -85,12 +91,12 @@ These contracts are deployed and live.
 | Contract | Address | Description |
 |----------|---------|-------------|
 | **TestUSDC** | [`0x6aFC...6c6`](https://polygonscan.com/address/0x6aFC2AD966a9DbB7D595D54F81AC924419f816c6) | Mock currency for testing |
-| **MarketFactory** | [`0x34a4...58E`](https://polygonscan.com/address/0x34a4d275549F4B243427793d7dd07A3DC8b7358E) | Creates new markets |
-| **PredictionAMM** | [`0xB1B6...81A`](https://polygonscan.com/address/0xB1B67563960fDD68BadeEb769Bf9b5A3D39aa81A) | Trading engine (CPMM) |
-| **MarketPositions**| [`0xfD93...01A`](https://polygonscan.com/address/0xfD93dAEc67a0a34Ae7eABd2Bde8D58710245001A) | ERC1155 Outcome Shares |
-| **VerifierV2** | [`0x862e...0Ca`](https://polygonscan.com/address/0x862eD35DBA824AfB27564d8ad3A3D7cF1302D0Ca) | Verifies market results |
-| **OracleAdapter** | [`0x695B...517`](https://polygonscan.com/address/0x695Bb36D976629E6d46C8E1E1De24C1dCD4Fa517) | Interfaces with AI Oracle |
-| **Treasury** | [`0xEB0F...fc5`](https://polygonscan.com/address/0xEB0F09C0817F75Be039275f3E3C93CdAc3FF3fc5) | Collects protocol fees |
+| **MarketFactory** | [`0xfCD1...3dEf`](https://polygonscan.com/address/0xfCD154BD714f4b9DDd271B8bdD1fF3d427333dEf) | Creates new markets |
+| **PredictionAMM** | [`0xAD8d...4213`](https://polygonscan.com/address/0xAD8dC6ca24038Af23E2f2Ea7A07B588cF04F4213) | Trading engine (CPMM) |
+| **MarketPositions**| [`0xA2B9...c2fE`](https://polygonscan.com/address/0xA2B9d3C0557b344bc475fc0c0aCC2a25C74Fc2fE) | ERC1155 Outcome Shares |
+| **VerifierV2** | [`0xd619...2a7`](https://polygonscan.com/address/0xd619b6C8c24fBcC1A764B4e11175DB7B8Caad2a7) | Verifies market results |
+| **OracleAdapter** | [`0xd452...0c10`](https://polygonscan.com/address/0xd45284283A8D0BDD15728859B12E9EBBF2630c10) | Interfaces with AI Oracle |
+| **Treasury** | [`0x9F27...0664`](https://polygonscan.com/address/0x9F275918503c4fdABe4FE2BF6365EeE6D2De0664) | Collects protocol fees |
 | **ORXToken** | [`0x1D23...6bD`](https://polygonscan.com/address/0x1D2306f42DB68Ac09d1305b98C63ca3F997076bD) | Governance Token |
 
 ---
@@ -126,3 +132,11 @@ graph TD
 
 ## 📄 License
 MIT License.
+
+## 📚 Security Docs
+- `docs/ARCHITECTURE_AND_THREAT_MODEL.md`
+- `docs/ROLE_MATRIX_AND_EMERGENCY_RUNBOOK.md`
+
+
+
+
